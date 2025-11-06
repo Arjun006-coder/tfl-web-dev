@@ -7,7 +7,7 @@ import { useState } from 'react'
 
 export default function EmergencyAlert() {
   const emergencies = useEmergencyEvents()
-  const [dismissed, setDismissed] = useState<Set<number>>(new Set())
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   
   const activeEmergencies = emergencies.filter(e => !dismissed.has(e.id))
   
