@@ -6,6 +6,7 @@ import StatsPanel from '@/components/dashboard/StatsPanel'
 import LightStatusPanel from '@/components/dashboard/LightStatusPanel'
 import DecisionLogic from '@/components/dashboard/DecisionLogic'
 import TrafficFlowGraph from '@/components/dashboard/TrafficFlowGraph'
+import WaitingTimeComparison from '@/components/dashboard/WaitingTimeComparison'
 import { Activity } from 'lucide-react'
 
 // Load 3D scene only on client (prevents SSR issues with Three.js)
@@ -60,6 +61,7 @@ export default function Dashboard() {
             <StatsPanel />
             <LightStatusPanel />
             <DecisionLogic />
+            <WaitingTimeComparison />
             <TrafficFlowGraph />
           </div>
         </div>

@@ -15,9 +15,10 @@ export default function TrafficScene3D() {
   const { tracks: vehicleTracks } = useVehicleTracks()  // Get vehicles with world coordinates
   const lightStatus = useLightStatus()
   
-  const debouncedVehicles = useDebounce(vehicleData, 150)
-  const debouncedTracks = useDebounce(vehicleTracks, 150)
-  const debouncedLights = useDebounce(lightStatus, 150)
+  // Increased debounce to reduce lag and prevent too many updates
+  const debouncedVehicles = useDebounce(vehicleData, 300)
+  const debouncedTracks = useDebounce(vehicleTracks, 300)
+  const debouncedLights = useDebounce(lightStatus, 300)
   
   return (
     <div className="w-full h-full bg-gradient-to-b from-[#202739] to-[#141a24] relative">

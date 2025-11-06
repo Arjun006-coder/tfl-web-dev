@@ -59,23 +59,31 @@ export default function WorldVehicle({ vehicle, intersectionPosition, intersecti
     const nearEastLight = Math.abs(x - (intersectionX + lightDistance)) < lightAvoidanceRadius && Math.abs(z - intersectionZ) < 5
     const nearWestLight = Math.abs(x - (intersectionX - lightDistance)) < lightAvoidanceRadius && Math.abs(z - intersectionZ) < 5
     
-    // Place vehicles on actual road lanes (offset from light positions)
-    if (nearNorthLight || (Math.abs(vehicle.world_x - 0.5) < 0.1 && vehicle.world_y < 0.5)) {
-      // North lane - place on road, avoid light at z = -13
+    // Place vehicles on actual road lanes with proper spacing
+    // Determine lane based on world coordinates
+    const isNorth = vehicle.world_y < 0.5 && Math.abs(vehicle.world_x - 0.5) < 0.15
+    const isSouth = vehicle.world_y > 0.5 && Math.abs(vehicle.world_x - 0.5) < 0.15
+    const isEast = vehicle.world_x > 0.5 && Math.abs(vehicle.world_y - 0.5) < 0.15
+    const isWest = vehicle.world_x < 0.5 && Math.abs(vehicle.world_y - 0.5) < 0.15
+    
+    if (isNorth || nearNorthLight) {
+      // North lane - vehicles move from top to bottom (negative z direction)
       x = intersectionX  // Center of north-south road
-      z = intersectionZ - 18  // Far enough from light (light is at -13, place at -18)
-    } else if (nearSouthLight || (Math.abs(vehicle.world_x - 0.5) < 0.1 && vehicle.world_y > 0.5)) {
-      // South lane
+      // Map world_y (0.0 to 0.5) to z position (far north to intersection)
+      z = intersectionZ - 25 - (vehicle.world_y * 30)  // Start at -25, move toward intersection
+    } else if (isSouth || nearSouthLight) {
+      // South lane - vehicles move from bottom to top (positive z direction)
       x = intersectionX
-      z = intersectionZ + 18  // Far enough from light (light is at 13, place at 18)
-    } else if (nearEastLight || (vehicle.world_x > 0.5 && Math.abs(vehicle.world_y - 0.5) < 0.1)) {
-      // East lane
-      x = intersectionX + 18  // Far enough from light (light is at 13, place at 18)
+      // Map world_y (0.5 to 1.0) to z position (intersection to far south)
+      z = intersectionZ + 25 + ((vehicle.world_y - 0.5) * 30)
+    } else if (isEast || nearEastLight) {
+      // East lane - vehicles move from right to left (negative x direction)
       z = intersectionZ
-    } else if (nearWestLight || (vehicle.world_x < 0.5 && Math.abs(vehicle.world_y - 0.5) < 0.1)) {
-      // West lane
-      x = intersectionX - 18  // Far enough from light (light is at -13, place at -18)
+      x = intersectionX + 25 + ((vehicle.world_x - 0.5) * 30)
+    } else if (isWest || nearWestLight) {
+      // West lane - vehicles move from left to right (positive x direction)
       z = intersectionZ
+      x = intersectionX - 25 - (vehicle.world_x * 30)
     } else {
       // Vehicle is on approach/exit roads - clamp to road area but avoid lights
       const maxDistance = intersectionHalfSize + roadExtent

@@ -234,22 +234,28 @@ function Vehicle({ type, position, targetPosition, color }: VehicleProps) {
     targetPos.current.set(...targetPosition)
   }, [targetPosition])
   
-  // Smooth movement to target position with speed based on distance
+  // Very slow, smooth movement to prevent flashing and merging
   useFrame(() => {
     if (groupRef.current) {
       const distance = groupRef.current.position.distanceTo(targetPos.current)
-      // Faster movement for larger distances, slower for small adjustments
-      const lerpFactor = Math.min(0.15, Math.max(0.05, distance * 0.02))
+      // Much slower movement - prevent fast flashing
+      const lerpFactor = Math.min(0.03, Math.max(0.01, distance * 0.005))
       groupRef.current.position.lerp(targetPos.current, lerpFactor)
       
-      // Rotate vehicle to face movement direction
-      if (distance > 0.1) {
+      // Smooth rotation to face movement direction
+      if (distance > 0.5) {
         const direction = new Vector3()
           .subVectors(targetPos.current, groupRef.current.position)
           .normalize()
         if (direction.length() > 0) {
-          const angle = Math.atan2(direction.x, direction.z)
-          groupRef.current.rotation.y = angle
+          const targetAngle = Math.atan2(direction.x, direction.z)
+          // Smooth rotation interpolation
+          let currentAngle = groupRef.current.rotation.y
+          let diff = targetAngle - currentAngle
+          // Normalize angle difference to [-PI, PI]
+          while (diff > Math.PI) diff -= 2 * Math.PI
+          while (diff < -Math.PI) diff += 2 * Math.PI
+          groupRef.current.rotation.y += diff * 0.1  // Slow rotation
         }
       }
     }

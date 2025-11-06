@@ -47,7 +47,7 @@ export function useVehicleTracks() {
           .not('track_id', 'is', null)
           .gte('created_at', nowIso)
           .order('created_at', { ascending: false })
-          .limit(100)  // Get recent tracks
+          .limit(50)  // Reduced limit to prevent lag
         
         if (error) throw error
         
