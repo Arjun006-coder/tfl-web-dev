@@ -71,10 +71,11 @@ export default function WorldVehicle({ vehicle, intersectionPosition, intersecti
     }
     
     // CRITICAL: Check if position changed - if not, vehicle is stopped, use exact position
-    const positionChanged = Math.abs(vehicle.world_x - smoothedX) > 0.001 || Math.abs(vehicle.world_y - smoothedY) > 0.001
+    // Use a larger threshold to detect actual movement vs noise
+    const positionChanged = Math.abs(vehicle.world_x - smoothedX) > 0.01 || Math.abs(vehicle.world_y - smoothedY) > 0.01
     
-    if (!positionChanged) {
-      // Position hasn't changed - vehicle is stopped, use exact position
+    if (!positionChanged && smoothedX !== null && smoothedY !== null) {
+      // Position hasn't changed - vehicle is stopped, use exact position (no smoothing)
       smoothedX = vehicle.world_x
       smoothedY = vehicle.world_y
     } else {
