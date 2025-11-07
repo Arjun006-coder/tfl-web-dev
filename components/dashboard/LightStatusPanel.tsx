@@ -21,8 +21,22 @@ function CountdownTimer({ duration, color, updatedAt }: { duration: number; colo
   const [timeLeft, setTimeLeft] = useState(duration)
   
   useEffect(() => {
-    if (!updatedAt || duration <= 0 || duration > 120) {
-      // If duration is invalid or too large, reset to 0
+    // If no updatedAt, try to use current time as fallback
+    if (!updatedAt) {
+      if (duration > 0 && duration <= 120) {
+        // If we have duration but no timestamp, show duration as countdown
+        setTimeLeft(duration)
+        const interval = setInterval(() => {
+          setTimeLeft(prev => Math.max(0, prev - 0.1))
+        }, 100)
+        return () => clearInterval(interval)
+      } else {
+        setTimeLeft(0)
+        return
+      }
+    }
+    
+    if (duration <= 0 || duration > 120) {
       setTimeLeft(0)
       return
     }
@@ -35,7 +49,8 @@ function CountdownTimer({ duration, color, updatedAt }: { duration: number; colo
         const remaining = Math.max(0, duration - elapsed)
         setTimeLeft(remaining)
       } catch (e) {
-        setTimeLeft(0)
+        // Fallback: if timestamp parsing fails, show duration
+        setTimeLeft(duration)
       }
     }
     

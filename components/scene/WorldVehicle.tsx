@@ -70,27 +70,33 @@ export default function WorldVehicle({ vehicle, intersectionPosition, intersecti
       return { x: smoothedX, y: smoothedY, lane }
     }
     
-    // Smooth interpolation - ONLY within lane-specific bounds
+    // Smooth interpolation - USE ACTUAL VEHICLE POSITIONS, don't force to center
     if (lane === 'north') {
       // North: moving south (world_y increases 0.05 -> 0.35)
+      // Use actual vehicle.world_y, just clamp to valid range
       smoothedY = Math.max(0.05, Math.min(0.35, vehicle.world_y))
-      smoothedY = smoothedY + (vehicle.world_y - smoothedY) * 0.2
-      smoothedX = 0.5  // ALWAYS center on North-South road
+      smoothedY = smoothedX + (vehicle.world_y - smoothedY) * 0.3  // Smooth movement
+      smoothedX = vehicle.world_x  // Use actual X position, don't force to 0.5
+      // Clamp X to road bounds (left side of road)
+      smoothedX = Math.max(0.45, Math.min(0.55, smoothedX))
     } else if (lane === 'south') {
       // South: moving north (world_y decreases 0.95 -> 0.65)
       smoothedY = Math.max(0.65, Math.min(0.95, vehicle.world_y))
-      smoothedY = smoothedY + (vehicle.world_y - smoothedY) * 0.2
-      smoothedX = 0.5  // ALWAYS center on North-South road
+      smoothedY = smoothedY + (vehicle.world_y - smoothedY) * 0.3
+      smoothedX = vehicle.world_x  // Use actual X position
+      smoothedX = Math.max(0.45, Math.min(0.55, smoothedX))
     } else if (lane === 'east') {
       // East: moving west (world_x decreases 0.95 -> 0.65)
       smoothedX = Math.max(0.65, Math.min(0.95, vehicle.world_x))
-      smoothedX = smoothedX + (vehicle.world_x - smoothedX) * 0.2
-      smoothedY = 0.5  // ALWAYS center on East-West road
+      smoothedX = smoothedX + (vehicle.world_x - smoothedX) * 0.3
+      smoothedY = vehicle.world_y  // Use actual Y position
+      smoothedY = Math.max(0.45, Math.min(0.55, smoothedY))
     } else {  // west
       // West: moving east (world_x increases 0.05 -> 0.35)
       smoothedX = Math.max(0.05, Math.min(0.35, vehicle.world_x))
-      smoothedX = smoothedX + (vehicle.world_x - smoothedX) * 0.2
-      smoothedY = 0.5  // ALWAYS center on East-West road
+      smoothedX = smoothedX + (vehicle.world_x - smoothedX) * 0.3
+      smoothedY = vehicle.world_y  // Use actual Y position
+      smoothedY = Math.max(0.45, Math.min(0.55, smoothedY))
     }
     
     // Update refs

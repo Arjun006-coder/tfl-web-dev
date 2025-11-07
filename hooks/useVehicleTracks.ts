@@ -38,7 +38,8 @@ export function useVehicleTracks() {
     const fetchTracks = async () => {
       try {
         // Fetch detections with world coordinates and track_id
-        const nowIso = new Date(Date.now() - 30_000).toISOString()
+        // Only get vehicles from last 10 seconds to prevent accumulation
+        const nowIso = new Date(Date.now() - 10_000).toISOString()
         const { data: detections, error } = await supabase
           .from('vehicle_detections')
           .select('*')
@@ -46,8 +47,9 @@ export function useVehicleTracks() {
           .not('world_y', 'is', null)
           .not('track_id', 'is', null)
           .gte('created_at', nowIso)
+          .eq('intersection', 'int1')  // Only get vehicles for intersection 1
           .order('created_at', { ascending: false })
-          .limit(50)  // Reduced limit to prevent lag
+          .limit(30)  // Reduced limit to prevent lag
         
         if (error) throw error
         
