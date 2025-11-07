@@ -75,7 +75,7 @@ export default function WorldVehicle({ vehicle, intersectionPosition, intersecti
       // North: moving south (world_y increases 0.05 -> 0.35)
       // Use actual vehicle.world_y, just clamp to valid range
       smoothedY = Math.max(0.05, Math.min(0.35, vehicle.world_y))
-      smoothedY = smoothedX + (vehicle.world_y - smoothedY) * 0.3  // Smooth movement
+      smoothedY = smoothedY + (vehicle.world_y - smoothedY) * 0.3  // Smooth movement
       smoothedX = vehicle.world_x  // Use actual X position, don't force to 0.5
       // Clamp X to road bounds (left side of road)
       smoothedX = Math.max(0.45, Math.min(0.55, smoothedX))
