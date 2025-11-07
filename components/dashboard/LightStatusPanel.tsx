@@ -57,6 +57,16 @@ function CountdownTimer({ duration, color, updatedAt }: { duration: number; colo
           const now = Date.now()
           const elapsed = (now - startTimeRef.current) / 1000  // Use decimal for accuracy
           const remaining = Math.max(0, Math.ceil(durationRef.current - elapsed))  // Round up to show full seconds
+          
+          // CRITICAL: If elapsed is way too large, the timestamp is old - reset it
+          if (elapsed > durationRef.current * 2) {
+            // Timestamp is too old - reset to current time
+            startTimeRef.current = Date.now()
+            setTimeLeft(durationRef.current)
+            console.log(`[Countdown] ${color} - Timestamp too old (${elapsed.toFixed(1)}s), resetting to now`)
+            return
+          }
+          
           setTimeLeft(remaining)
           
           // Debug log every second or when remaining is low
