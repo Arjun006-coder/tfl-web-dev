@@ -2,7 +2,7 @@
 
 import { Badge } from '@/components/ui/Badge'
 import { useLightStatus } from '@/hooks/useLightStatus'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Circle } from 'lucide-react'
 
@@ -18,47 +18,47 @@ const lanes = [
 ]
 
 function CountdownTimer({ duration, color, updatedAt }: { duration: number; color: string; updatedAt?: string }) {
-  const [timeLeft, setTimeLeft] = useState(duration)
+  const [timeLeft, setTimeLeft] = useState<number>(0)
+  const startTimeRef = useRef<number | null>(null)
   
   useEffect(() => {
-    // If no updatedAt, try to use current time as fallback
-    if (!updatedAt) {
-      if (duration > 0 && duration <= 120) {
-        // If we have duration but no timestamp, show duration as countdown
-        setTimeLeft(duration)
-        const interval = setInterval(() => {
-          setTimeLeft(prev => Math.max(0, prev - 0.1))
-        }, 100)
-        return () => clearInterval(interval)
+    // Reset when duration or color changes
+    if (duration > 0 && duration <= 120) {
+      // If we have updatedAt, calculate from timestamp
+      if (updatedAt) {
+        try {
+          const updateTime = new Date(updatedAt).getTime()
+          const now = Date.now()
+          const elapsed = Math.floor((now - updateTime) / 1000)
+          const remaining = Math.max(0, duration - elapsed)
+          setTimeLeft(remaining)
+          startTimeRef.current = Date.now() - (duration - remaining) * 1000
+        } catch (e) {
+          // If timestamp invalid, use duration and start countdown
+          setTimeLeft(duration)
+          startTimeRef.current = Date.now()
+        }
       } else {
-        setTimeLeft(0)
-        return
+        // No timestamp, start countdown from duration
+        setTimeLeft(duration)
+        startTimeRef.current = Date.now()
       }
-    }
-    
-    if (duration <= 0 || duration > 120) {
+    } else {
       setTimeLeft(0)
+      startTimeRef.current = null
       return
     }
     
-    const updateTimer = () => {
-      try {
-        const updateTime = new Date(updatedAt).getTime()
-        const now = Date.now()
-        const elapsed = Math.floor((now - updateTime) / 1000)
+    // Update countdown every 100ms
+    const interval = setInterval(() => {
+      if (startTimeRef.current !== null && duration > 0) {
+        const elapsed = (Date.now() - startTimeRef.current) / 1000
         const remaining = Math.max(0, duration - elapsed)
-        setTimeLeft(remaining)
-      } catch (e) {
-        // Fallback: if timestamp parsing fails, show duration
-        setTimeLeft(duration)
+        setTimeLeft(Math.floor(remaining))
+      } else {
+        setTimeLeft(0)
       }
-    }
-    
-    // Update immediately
-    updateTimer()
-    
-    // Update every 100ms for smoother countdown
-    const interval = setInterval(updateTimer, 100)
+    }, 100)
     
     return () => clearInterval(interval)
   }, [duration, updatedAt, color])
