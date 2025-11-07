@@ -273,53 +273,25 @@ function Vehicle({ type, position, targetPosition, color, lane }: VehicleProps) 
     }
   }, [position, targetPosition, lane])
   
-  // Very slow, smooth movement to prevent flashing and merging
+  // VEHICLES ARE STATIC - No animation, use exact position
+  // Disable all movement animation
   useFrame(() => {
     if (groupRef.current) {
-      const distance = groupRef.current.position.distanceTo(targetPos.current)
-      // VERY slow movement - prevent flashing, smooth animation
-      const lerpFactor = Math.min(0.008, Math.max(0.002, distance * 0.001))  // Much slower
-      groupRef.current.position.lerp(targetPos.current, lerpFactor)
+      // INSTANTLY set position to target - no lerp, no animation
+      groupRef.current.position.copy(targetPos.current)
       
-      // Smooth rotation to face movement direction
-      // CRITICAL: North-South vehicles must face along z-axis (vertical), East-West along x-axis (horizontal)
-      const direction = new Vector3()
-        .subVectors(targetPos.current, groupRef.current.position)
-      
-      const distZ = Math.abs(direction.z)
-      const distX = Math.abs(direction.x)
-      
-      let targetAngle: number
-      
-      // Determine primary movement axis - use lane if available for accuracy
+      // Set rotation based on lane (static, no interpolation)
       if (lane) {
-        // Use lane to determine correct rotation
-        if (lane === 'north' || lane === 'south') {
-          // North-South road - face along z-axis
-          targetAngle = lane === 'north' ? 0 : Math.PI  // North faces south (0), South faces north (PI)
-        } else {
-          // East-West road - face along x-axis
-          targetAngle = lane === 'east' ? -Math.PI / 2 : Math.PI / 2  // East faces west (-PI/2), West faces east (PI/2)
+        if (lane === 'north') {
+          groupRef.current.rotation.y = 0
+        } else if (lane === 'south') {
+          groupRef.current.rotation.y = Math.PI
+        } else if (lane === 'east') {
+          groupRef.current.rotation.y = -Math.PI / 2
+        } else if (lane === 'west') {
+          groupRef.current.rotation.y = Math.PI / 2
         }
-      } else if (distZ > distX) {
-        // Moving primarily along z-axis (North-South road)
-        targetAngle = direction.z > 0 ? 0 : Math.PI
-      } else if (distX > 0.1) {
-        // Moving primarily along x-axis (East-West road)
-        targetAngle = direction.x > 0 ? Math.PI / 2 : -Math.PI / 2
-      } else {
-        // Not moving much - maintain current rotation
-        return
       }
-      
-      // Smooth rotation interpolation
-      let currentAngle = groupRef.current.rotation.y
-      let diff = targetAngle - currentAngle
-      // Normalize angle difference to [-PI, PI]
-      while (diff > Math.PI) diff -= 2 * Math.PI
-      while (diff < -Math.PI) diff += 2 * Math.PI
-      // Smooth rotation
-      groupRef.current.rotation.y += diff * 0.15  // Faster rotation for better responsiveness
     }
   })
   

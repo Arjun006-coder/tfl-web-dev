@@ -167,30 +167,21 @@ export default function WorldVehicle({ vehicle, intersectionPosition, intersecti
     return [x, y, z] as [number, number, number]
   }, [smoothedCoords, intersectionPosition, intersectionSize])
   
+  // VEHICLES ARE STATIC - Use exact position, no animation
   // Update target position when world coordinates change
   useEffect(() => {
     targetPositionRef.current = position3D
-    if (!prevPositionRef.current) {
-      prevPositionRef.current = position3D
-    }
+    prevPositionRef.current = position3D  // Keep in sync
   }, [position3D])
   
-  // Use previous position as starting point for smooth animation
-  const startPosition = prevPositionRef.current || position3D
-  
-  useEffect(() => {
-    // Update previous position after animation completes
-    const timer = setTimeout(() => {
-      prevPositionRef.current = position3D
-    }, 200)
-    return () => clearTimeout(timer)
-  }, [position3D])
+  // Use exact position - no animation
+  const startPosition = position3D
   
   return (
     <Vehicle
       type={vehicle.vehicleType}
       position={startPosition}
-      targetPosition={targetPositionRef.current}
+      targetPosition={position3D}
       lane={lane}
     />
   )
