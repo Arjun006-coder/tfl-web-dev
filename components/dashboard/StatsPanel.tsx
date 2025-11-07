@@ -10,12 +10,12 @@ import { motion } from 'framer-motion'
 
 export default function StatsPanel() {
   const vehicleData = useVehicleDetections()
-  const { vehicleTracks } = useVehicleTracks()
+  const { tracks } = useVehicleTracks()
   const emergencies = useEmergencyEvents()
   const stats = useStats()
   
   // Calculate total vehicles currently in system from vehicle tracks (more accurate)
-  const totalVehiclesFromTracks = Object.values(vehicleTracks).flat().length
+  const totalVehiclesFromTracks = Object.values(tracks).flat().length
   
   // Fallback to vehicleData if tracks are empty
   const totalVehicles = totalVehiclesFromTracks > 0 
