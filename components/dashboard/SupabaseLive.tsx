@@ -38,3 +38,4 @@ export default function SupabaseLive({ onVehicle, onLight }: Props) {
 
 
 
+

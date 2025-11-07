@@ -101,12 +101,13 @@ export function useLightStatus() {
         }
       })
     
-    // Also poll every 2 seconds as backup for real-time updates
+    // Also poll every 1 second as backup for real-time updates
     const pollInterval = setInterval(async () => {
       try {
         const { data: lights, error } = await supabase
           .from('light_status')
           .select('*')
+          .eq('intersection', 'int1')
           .order('updated_at', { ascending: false })
           .limit(8)
         
@@ -121,12 +122,25 @@ export function useLightStatus() {
               updatedAt: light.updated_at
             }
           })
-          setData(prev => ({ ...prev, ...grouped }))
+          // Merge with existing data to preserve real-time updates
+          setData(prev => {
+            const merged = { ...prev }
+            Object.keys(grouped).forEach(key => {
+              // Only update if new data is more recent
+              const newItem = grouped[key]
+              const oldItem = prev[key]
+              if (!oldItem || !oldItem.updatedAt || 
+                  (newItem.updatedAt && new Date(newItem.updatedAt) > new Date(oldItem.updatedAt))) {
+                merged[key] = newItem
+              }
+            })
+            return merged
+          })
         }
       } catch (err) {
         console.error('Error polling light status:', err)
       }
-    }, 2000)
+    }, 1000)
     
     return () => {
       clearInterval(pollInterval)
