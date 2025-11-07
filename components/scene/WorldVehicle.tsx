@@ -118,45 +118,63 @@ export default function WorldVehicle({ vehicle, intersectionPosition, intersecti
     const [intersectionX, intersectionY, intersectionZ] = intersectionPosition
     const { x: world_x, y: world_y, lane } = smoothedCoords
     
-    // Road configuration
-    const roadExtent = 40  // How far roads extend from intersection
+    // Road configuration - match Intersection.tsx geometry
+    // Roads are 8 units wide, centered at intersection
+    // Road extends from intersection edge (z=±12 or x=±12) to approximately z=±33 or x=±33
+    const roadExtent = 33  // How far roads extend from intersection center (matches Intersection.tsx)
     const intersectionHalfSize = intersectionSize / 2  // 12 units
+    const roadWidth = 8  // Road width in 3D units (matches Intersection.tsx)
+    const leftSideOffset = 2.5  // LEFT side offset from center (for left-hand traffic)
     
     let x = intersectionX
     let z = intersectionZ
-    
-    // Road width offset for LEFT side positioning (offset from center)
-    const roadWidth = 6  // Road width in 3D units
-    const leftSideOffset = roadWidth / 2 - 1.5  // Offset to LEFT side of road
     
     if (lane === 'north') {
       // North lane: vehicles on vertical road, moving from north (negative z) toward intersection (going SOUTH)
       // Map world_y (0.05 to 0.35) to z position
       const normalized_y = Math.max(0.05, Math.min(0.35, world_y))
       const progress = (normalized_y - 0.05) / 0.3  // Normalize to 0-1
+      // Road extends from z=-33 to z=-12 (intersection edge)
       z = intersectionZ - roadExtent + (progress * (roadExtent - intersectionHalfSize))
-      x = intersectionX - leftSideOffset  // LEFT side of North-South road
+      // LEFT side of North-South road (x offset from center)
+      x = intersectionX - leftSideOffset
     } else if (lane === 'south') {
       // South lane: vehicles on vertical road, moving from south (positive z) toward intersection (going NORTH)
       // Map world_y (0.95 to 0.65) to z position (decreasing)
       const normalized_y = Math.max(0.65, Math.min(0.95, world_y))
       const progress = (0.95 - normalized_y) / 0.3  // Normalize to 0-1 (inverted)
+      // Road extends from z=+33 to z=+12 (intersection edge)
       z = intersectionZ + roadExtent - (progress * (roadExtent - intersectionHalfSize))
-      x = intersectionX - leftSideOffset  // LEFT side of North-South road
+      // LEFT side of North-South road (x offset from center)
+      x = intersectionX - leftSideOffset
     } else if (lane === 'east') {
       // East lane: vehicles on horizontal road, moving from east (positive x) toward intersection (going WEST)
       // Map world_x (0.95 to 0.65) to x position (decreasing)
       const normalized_x = Math.max(0.65, Math.min(0.95, world_x))
       const progress = (0.95 - normalized_x) / 0.3  // Normalize to 0-1 (inverted)
+      // Road extends from x=+33 to x=+12 (intersection edge)
       x = intersectionX + roadExtent - (progress * (roadExtent - intersectionHalfSize))
-      z = intersectionZ - leftSideOffset  // LEFT side of East-West road
+      // LEFT side of East-West road (z offset from center)
+      z = intersectionZ - leftSideOffset
     } else {  // west
       // West lane: vehicles on horizontal road, moving from west (negative x) toward intersection (going EAST)
       // Map world_x (0.05 to 0.35) to x position
       const normalized_x = Math.max(0.05, Math.min(0.35, world_x))
       const progress = (normalized_x - 0.05) / 0.3  // Normalize to 0-1
+      // Road extends from x=-33 to x=-12 (intersection edge)
       x = intersectionX - roadExtent + (progress * (roadExtent - intersectionHalfSize))
-      z = intersectionZ - leftSideOffset  // LEFT side of East-West road
+      // LEFT side of East-West road (z offset from center)
+      z = intersectionZ - leftSideOffset
+    }
+    
+    // CRITICAL: Ensure vehicles are ALWAYS within road bounds (±4 from center for 8-unit wide road)
+    const roadHalfWidth = roadWidth / 2  // 4 units
+    if (lane === 'north' || lane === 'south') {
+      // North-South road: constrain x to road bounds
+      x = Math.max(intersectionX - roadHalfWidth, Math.min(intersectionX + roadHalfWidth, x))
+    } else {
+      // East-West road: constrain z to road bounds
+      z = Math.max(intersectionZ - roadHalfWidth, Math.min(intersectionZ + roadHalfWidth, z))
     }
     
     // Final safety check: ensure vehicles are NEVER in intersection center
