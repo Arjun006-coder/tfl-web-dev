@@ -101,7 +101,7 @@ export function useLightStatus() {
         }
       })
     
-    // Also poll every 1 second as backup for real-time updates
+    // Poll every 1 second as backup for real-time updates (faster than 2s)
     const pollInterval = setInterval(async () => {
       try {
         const { data: lights, error } = await supabase
@@ -122,13 +122,13 @@ export function useLightStatus() {
               updatedAt: light.updated_at
             }
           })
-          // Merge with existing data to preserve real-time updates
+          // Smart merge: only update if new data is more recent
           setData(prev => {
             const merged = { ...prev }
             Object.keys(grouped).forEach(key => {
-              // Only update if new data is more recent
               const newItem = grouped[key]
               const oldItem = prev[key]
+              // Update if no old data OR new data is more recent
               if (!oldItem || !oldItem.updatedAt || 
                   (newItem.updatedAt && new Date(newItem.updatedAt) > new Date(oldItem.updatedAt))) {
                 merged[key] = newItem
