@@ -20,8 +20,9 @@ export function useLightStatus() {
         const { data: lights, error } = await supabase
           .from('light_status')
           .select('*')
+          .eq('intersection', 'int1')  // Only int1
           .order('updated_at', { ascending: false })
-          .limit(8)
+          .limit(4)  // Only 4 lanes for single intersection
         
         if (error) {
           console.error('Error fetching light status:', error)
@@ -109,7 +110,7 @@ export function useLightStatus() {
           .select('*')
           .eq('intersection', 'int1')
           .order('updated_at', { ascending: false })
-          .limit(8)
+          .limit(4)  // Only 4 lanes for single intersection
         
         if (error) {
           console.error('Error polling light status:', error)

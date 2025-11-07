@@ -19,19 +19,22 @@ function CountdownTimer({ duration, color, updatedAt }: { duration: number; colo
   const startTimeRef = useRef<number | null>(null)
   
   useEffect(() => {
-    // Reset when duration or color changes
+    // Reset when duration, updatedAt, or color changes
     if (duration > 0 && duration <= 120) {
-      // If we have updatedAt, calculate from timestamp
       if (updatedAt) {
         try {
           const updateTime = new Date(updatedAt).getTime()
           const now = Date.now()
           const elapsed = Math.floor((now - updateTime) / 1000)
           const remaining = Math.max(0, duration - elapsed)
+          
+          // Set initial time left
           setTimeLeft(remaining)
-          startTimeRef.current = Date.now() - (duration - remaining) * 1000
+          
+          // Calculate when the phase started (for countdown)
+          startTimeRef.current = now - (elapsed * 1000)
         } catch (e) {
-          // If timestamp invalid, use duration and start countdown
+          // If timestamp invalid, use duration and start countdown now
           setTimeLeft(duration)
           startTimeRef.current = Date.now()
         }
@@ -46,12 +49,29 @@ function CountdownTimer({ duration, color, updatedAt }: { duration: number; colo
       return
     }
     
-    // Update countdown every 100ms
+    // Update countdown every 100ms for smooth display
     const interval = setInterval(() => {
       if (startTimeRef.current !== null && duration > 0) {
-        const elapsed = (Date.now() - startTimeRef.current) / 1000
-        const remaining = Math.max(0, duration - elapsed)
-        setTimeLeft(Math.floor(remaining))
+        if (updatedAt) {
+          // Use timestamp-based calculation for accuracy
+          try {
+            const updateTime = new Date(updatedAt).getTime()
+            const now = Date.now()
+            const elapsed = Math.floor((now - updateTime) / 1000)
+            const remaining = Math.max(0, duration - elapsed)
+            setTimeLeft(Math.floor(remaining))
+          } catch (e) {
+            // Fallback to duration-based countdown
+            const elapsed = (Date.now() - startTimeRef.current) / 1000
+            const remaining = Math.max(0, duration - elapsed)
+            setTimeLeft(Math.floor(remaining))
+          }
+        } else {
+          // No timestamp, use duration-based countdown
+          const elapsed = (Date.now() - startTimeRef.current) / 1000
+          const remaining = Math.max(0, duration - elapsed)
+          setTimeLeft(Math.floor(remaining))
+        }
       } else {
         setTimeLeft(0)
       }
