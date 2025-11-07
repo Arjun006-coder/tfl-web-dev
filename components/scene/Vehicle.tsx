@@ -227,7 +227,7 @@ function FallbackVehicle({ type, color }: { type: VehicleType; color: string }) 
   )
 }
 
-function Vehicle({ type, position, targetPosition, color }: VehicleProps) {
+function Vehicle({ type, position, targetPosition, color, lane }: VehicleProps) {
   const groupRef = useRef<Group>(null)
   const targetPos = useRef(new Vector3(...targetPosition))
   const initialRotationSet = useRef(false)
@@ -236,29 +236,42 @@ function Vehicle({ type, position, targetPosition, color }: VehicleProps) {
     targetPos.current.set(...targetPosition)
   }, [targetPosition])
   
-  // Set initial rotation based on position (determine if NS or EW road)
+  // Set initial rotation based on lane (CRITICAL for correct orientation)
   useEffect(() => {
-    if (groupRef.current && !initialRotationSet.current) {
+    if (groupRef.current && !initialRotationSet.current && lane) {
+      // Set rotation based on lane direction
+      if (lane === 'north') {
+        // North lane: vehicles go SOUTH (toward intersection), face 0 radians (south)
+        groupRef.current.rotation.y = 0
+      } else if (lane === 'south') {
+        // South lane: vehicles go NORTH (toward intersection), face PI radians (north)
+        groupRef.current.rotation.y = Math.PI
+      } else if (lane === 'east') {
+        // East lane: vehicles go WEST (toward intersection), face -PI/2 radians (west)
+        groupRef.current.rotation.y = -Math.PI / 2
+      } else if (lane === 'west') {
+        // West lane: vehicles go EAST (toward intersection), face PI/2 radians (east)
+        groupRef.current.rotation.y = Math.PI / 2
+      }
+      
+      initialRotationSet.current = true
+    } else if (groupRef.current && !initialRotationSet.current && !lane) {
+      // Fallback: determine from position if lane not provided
       const [x, y, z] = position
       const [tx, ty, tz] = targetPosition
       
-      // Determine if vehicle is on North-South road (z changes more) or East-West road (x changes more)
       const distZ = Math.abs(tz - z)
       const distX = Math.abs(tx - x)
       
       if (distZ > distX) {
-        // North-South road - face along z-axis
-        // If moving south (z increasing), face 0. If moving north (z decreasing), face PI
         groupRef.current.rotation.y = tz > z ? 0 : Math.PI
       } else if (distX > 0.1) {
-        // East-West road - face along x-axis
-        // If moving east (x increasing), face PI/2. If moving west (x decreasing), face -PI/2
         groupRef.current.rotation.y = tx > x ? Math.PI / 2 : -Math.PI / 2
       }
       
       initialRotationSet.current = true
     }
-  }, [position, targetPosition])
+  }, [position, targetPosition, lane])
   
   // Very slow, smooth movement to prevent flashing and merging
   useFrame(() => {
