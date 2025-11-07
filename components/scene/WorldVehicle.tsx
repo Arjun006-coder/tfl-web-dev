@@ -212,6 +212,7 @@ export default function WorldVehicle({ vehicle, intersectionPosition, intersecti
       type={vehicle.vehicleType}
       position={startPosition}
       targetPosition={targetPositionRef.current}
+      lane={lane}
     />
   )
 }

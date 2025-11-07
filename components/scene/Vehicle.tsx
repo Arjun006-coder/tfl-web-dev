@@ -229,24 +229,33 @@ function FallbackVehicle({ type, color }: { type: VehicleType; color: string }) 
 function Vehicle({ type, position, targetPosition, color }: VehicleProps) {
   const groupRef = useRef<Group>(null)
   const targetPos = useRef(new Vector3(...targetPosition))
-  const laneRef = useRef<string | null>(null)
+  const initialRotationSet = useRef(false)
   
   useEffect(() => {
     targetPos.current.set(...targetPosition)
   }, [targetPosition])
   
-  // Determine lane from position (for rotation)
+  // Set initial rotation based on position (determine if NS or EW road)
   useEffect(() => {
-    // Check if vehicle is on North-South road (x is near intersection center) or East-West road (z is near intersection center)
-    // This is approximate - actual lane should come from vehicle data
-    const [x, y, z] = position
-    // If z changes more than x, it's on NS road. If x changes more, it's on EW road.
-    // We'll determine from target position movement
-    const [tx, ty, tz] = targetPosition
-    if (Math.abs(tz - z) > Math.abs(tx - x)) {
-      laneRef.current = tz > z ? 'north_to_south' : 'south_to_north'
-    } else {
-      laneRef.current = tx > x ? 'west_to_east' : 'east_to_west'
+    if (groupRef.current && !initialRotationSet.current) {
+      const [x, y, z] = position
+      const [tx, ty, tz] = targetPosition
+      
+      // Determine if vehicle is on North-South road (z changes more) or East-West road (x changes more)
+      const distZ = Math.abs(tz - z)
+      const distX = Math.abs(tx - x)
+      
+      if (distZ > distX) {
+        // North-South road - face along z-axis
+        // If moving south (z increasing), face 0. If moving north (z decreasing), face PI
+        groupRef.current.rotation.y = tz > z ? 0 : Math.PI
+      } else if (distX > 0.1) {
+        // East-West road - face along x-axis
+        // If moving east (x increasing), face PI/2. If moving west (x decreasing), face -PI/2
+        groupRef.current.rotation.y = tx > x ? Math.PI / 2 : -Math.PI / 2
+      }
+      
+      initialRotationSet.current = true
     }
   }, [position, targetPosition])
   

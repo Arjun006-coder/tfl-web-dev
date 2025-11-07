@@ -36,7 +36,19 @@ export default function DecisionLogic() {
                       {intersection.toUpperCase()} - {lane.charAt(0).toUpperCase() + lane.slice(1)}
                     </h3>
                     <span className="text-2xl font-bold text-green-500">
-                      {status.duration}s GREEN
+                      {status.updatedAt ? (
+                        (() => {
+                          try {
+                            const updateTime = new Date(status.updatedAt).getTime()
+                            const now = Date.now()
+                            const elapsed = Math.floor((now - updateTime) / 1000)
+                            const remaining = Math.max(0, status.duration - elapsed)
+                            return remaining > 0 && status.duration <= 120 ? `${remaining}s` : 'ACTIVE'
+                          } catch {
+                            return 'ACTIVE'
+                          }
+                        })()
+                      ) : 'ACTIVE'} GREEN
                     </span>
                   </div>
                   
