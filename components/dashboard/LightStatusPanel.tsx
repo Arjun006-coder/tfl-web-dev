@@ -52,14 +52,17 @@ function CountdownTimer({ duration, color, updatedAt }: { duration: number; colo
           const remaining = Math.max(0, Math.ceil(durationRef.current - elapsed))  // Round up to show full seconds
           setTimeLeft(remaining)
           
-          // Debug log every second
-          if (Math.floor(elapsed) % 1 === 0 || remaining < 5) {
-            console.log(`[Countdown] ${color} - elapsed: ${elapsed.toFixed(1)}s, remaining: ${remaining}s, duration: ${durationRef.current}s`)
+          // Debug log every second or when remaining is low
+          const elapsedSeconds = Math.floor(elapsed)
+          if (elapsedSeconds !== (updateTimer.lastLog || -1) || remaining < 5) {
+            console.log(`[Countdown] ${color} - elapsed: ${elapsed.toFixed(1)}s, remaining: ${remaining}s, duration: ${durationRef.current}s, now: ${new Date(now).toISOString()}, start: ${new Date(startTimeRef.current).toISOString()}`)
+            updateTimer.lastLog = elapsedSeconds
           }
         } else {
           setTimeLeft(durationRef.current)
         }
       }
+      updateTimer.lastLog = -1  // Track last logged second
       
       // Update immediately
       updateTimer()
