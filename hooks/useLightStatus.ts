@@ -101,9 +101,31 @@ export function useLightStatus() {
         }
       })
     
-    // Also poll every 2 seconds as backup
-    const pollInterval = setInterval(() => {
-      fetchInitial()
+    // Also poll every 2 seconds as backup for real-time updates
+    const pollInterval = setInterval(async () => {
+      try {
+        const { data: lights, error } = await supabase
+          .from('light_status')
+          .select('*')
+          .order('updated_at', { ascending: false })
+          .limit(8)
+        
+        if (!error && lights) {
+          const grouped: LightStatusMap = {}
+          lights.forEach((light: LightStatus) => {
+            const key = `${light.intersection}-${light.lane}`
+            grouped[key] = {
+              color: light.color,
+              duration: light.duration,
+              reason: light.reason,
+              updatedAt: light.updated_at
+            }
+          })
+          setData(prev => ({ ...prev, ...grouped }))
+        }
+      } catch (err) {
+        console.error('Error polling light status:', err)
+      }
     }, 2000)
     
     return () => {
