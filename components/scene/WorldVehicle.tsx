@@ -70,6 +70,15 @@ export default function WorldVehicle({ vehicle, intersectionPosition, intersecti
       return { x: smoothedX, y: smoothedY, lane }
     }
     
+    // VEHICLES ARE STATIC - Always use exact position, no smoothing
+    // Since movement is disabled, always return exact position
+    smoothedX = vehicle.world_x
+    smoothedY = vehicle.world_y
+    smoothedWorldXRef.current = smoothedX
+    smoothedWorldYRef.current = smoothedY
+    return { x: smoothedX, y: smoothedY, lane }
+    
+    /* DISABLED - Vehicles are static
     // CRITICAL: Check if position changed - if not, vehicle is stopped, use exact position
     // Use a larger threshold to detect actual movement vs noise
     const positionChanged = smoothedX !== null && smoothedY !== null && 
