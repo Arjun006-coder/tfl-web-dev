@@ -81,26 +81,28 @@ export default function WorldVehicle({ vehicle, intersectionPosition, intersecti
     }
     
     // Smooth interpolation (only allow forward progress)
+    // North cars go SOUTH (y increases), South cars go NORTH (y decreases)
+    // East cars go WEST (x decreases), West cars go EAST (x increases)
     if (lane === 'north') {
-      // North: moving south (world_y increases 0.0 -> 0.4)
-      smoothedY = Math.max(smoothedY, Math.min(vehicle.world_y, 0.4))
-      smoothedY = smoothedY + (vehicle.world_y - smoothedY) * 0.2
-      smoothedX = 0.5  // Always center on North-South road
+      // North: moving south (world_y increases 0.05 -> 0.35)
+      smoothedY = Math.max(smoothedY, Math.min(vehicle.world_y, 0.35))
+      smoothedY = smoothedY + (vehicle.world_y - smoothedY) * 0.15  // Slower smoothing
+      smoothedX = 0.45  // LEFT side of North-South road
     } else if (lane === 'south') {
-      // South: moving north (world_y decreases 1.0 -> 0.6, but we track as increasing 0.6 -> 1.0)
-      smoothedY = Math.max(smoothedY, Math.min(vehicle.world_y, 0.95))
-      smoothedY = smoothedY + (vehicle.world_y - smoothedY) * 0.2
-      smoothedX = 0.5  // Always center on North-South road
+      // South: moving north (world_y decreases 0.95 -> 0.65)
+      smoothedY = Math.min(smoothedY, Math.max(vehicle.world_y, 0.65))
+      smoothedY = smoothedY + (vehicle.world_y - smoothedY) * 0.15  // Slower smoothing
+      smoothedX = 0.45  // LEFT side of North-South road
     } else if (lane === 'east') {
-      // East: moving west (world_x decreases 1.0 -> 0.6, but we track as increasing 0.6 -> 1.0)
-      smoothedX = Math.max(smoothedX, Math.min(vehicle.world_x, 0.95))
-      smoothedX = smoothedX + (vehicle.world_x - smoothedX) * 0.2
-      smoothedY = 0.5  // Always center on East-West road
+      // East: moving west (world_x decreases 0.95 -> 0.65)
+      smoothedX = Math.min(smoothedX, Math.max(vehicle.world_x, 0.65))
+      smoothedX = smoothedX + (vehicle.world_x - smoothedX) * 0.15  // Slower smoothing
+      smoothedY = 0.45  // LEFT side of East-West road
     } else {  // west
-      // West: moving east (world_x increases 0.0 -> 0.4)
-      smoothedX = Math.max(smoothedX, Math.min(vehicle.world_x, 0.4))
-      smoothedX = smoothedX + (vehicle.world_x - smoothedX) * 0.2
-      smoothedY = 0.5  // Always center on East-West road
+      // West: moving east (world_x increases 0.05 -> 0.35)
+      smoothedX = Math.max(smoothedX, Math.min(vehicle.world_x, 0.35))
+      smoothedX = smoothedX + (vehicle.world_x - smoothedX) * 0.15  // Slower smoothing
+      smoothedY = 0.45  // LEFT side of East-West road
     }
     
     // Update refs
@@ -123,34 +125,38 @@ export default function WorldVehicle({ vehicle, intersectionPosition, intersecti
     let x = intersectionX
     let z = intersectionZ
     
+    // Road width offset for LEFT side positioning (offset from center)
+    const roadWidth = 6  // Road width in 3D units
+    const leftSideOffset = roadWidth / 2 - 1.5  // Offset to LEFT side of road
+    
     if (lane === 'north') {
-      // North lane: vehicles on vertical road, moving from north (negative z) toward intersection
-      // Map world_y (0.0 to 0.4) to z position
-      const normalized_y = Math.max(0.0, Math.min(0.4, world_y))
-      const progress = normalized_y / 0.4  // Normalize to 0-1
+      // North lane: vehicles on vertical road, moving from north (negative z) toward intersection (going SOUTH)
+      // Map world_y (0.05 to 0.35) to z position
+      const normalized_y = Math.max(0.05, Math.min(0.35, world_y))
+      const progress = (normalized_y - 0.05) / 0.3  // Normalize to 0-1
       z = intersectionZ - roadExtent + (progress * (roadExtent - intersectionHalfSize))
-      x = intersectionX  // Always center on North-South road
+      x = intersectionX - leftSideOffset  // LEFT side of North-South road
     } else if (lane === 'south') {
-      // South lane: vehicles on vertical road, moving from south (positive z) toward intersection
-      // Map world_y (0.6 to 1.0) to z position
-      const normalized_y = Math.max(0.6, Math.min(1.0, world_y))
-      const progress = (normalized_y - 0.6) / 0.4  // Normalize to 0-1
+      // South lane: vehicles on vertical road, moving from south (positive z) toward intersection (going NORTH)
+      // Map world_y (0.95 to 0.65) to z position (decreasing)
+      const normalized_y = Math.max(0.65, Math.min(0.95, world_y))
+      const progress = (0.95 - normalized_y) / 0.3  // Normalize to 0-1 (inverted)
       z = intersectionZ + roadExtent - (progress * (roadExtent - intersectionHalfSize))
-      x = intersectionX  // Always center on North-South road
+      x = intersectionX - leftSideOffset  // LEFT side of North-South road
     } else if (lane === 'east') {
-      // East lane: vehicles on horizontal road, moving from east (positive x) toward intersection
-      // Map world_x (0.6 to 1.0) to x position
-      const normalized_x = Math.max(0.6, Math.min(1.0, world_x))
-      const progress = (normalized_x - 0.6) / 0.4  // Normalize to 0-1
+      // East lane: vehicles on horizontal road, moving from east (positive x) toward intersection (going WEST)
+      // Map world_x (0.95 to 0.65) to x position (decreasing)
+      const normalized_x = Math.max(0.65, Math.min(0.95, world_x))
+      const progress = (0.95 - normalized_x) / 0.3  // Normalize to 0-1 (inverted)
       x = intersectionX + roadExtent - (progress * (roadExtent - intersectionHalfSize))
-      z = intersectionZ  // Always center on East-West road
+      z = intersectionZ - leftSideOffset  // LEFT side of East-West road
     } else {  // west
-      // West lane: vehicles on horizontal road, moving from west (negative x) toward intersection
-      // Map world_x (0.0 to 0.4) to x position
-      const normalized_x = Math.max(0.0, Math.min(0.4, world_x))
-      const progress = normalized_x / 0.4  // Normalize to 0-1
+      // West lane: vehicles on horizontal road, moving from west (negative x) toward intersection (going EAST)
+      // Map world_x (0.05 to 0.35) to x position
+      const normalized_x = Math.max(0.05, Math.min(0.35, world_x))
+      const progress = (normalized_x - 0.05) / 0.3  // Normalize to 0-1
       x = intersectionX - roadExtent + (progress * (roadExtent - intersectionHalfSize))
-      z = intersectionZ  // Always center on East-West road
+      z = intersectionZ - leftSideOffset  // LEFT side of East-West road
     }
     
     // Final safety check: ensure vehicles are NEVER in intersection center

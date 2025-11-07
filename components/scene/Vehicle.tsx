@@ -238,8 +238,8 @@ function Vehicle({ type, position, targetPosition, color }: VehicleProps) {
   useFrame(() => {
     if (groupRef.current) {
       const distance = groupRef.current.position.distanceTo(targetPos.current)
-      // Much slower movement - prevent fast flashing
-      const lerpFactor = Math.min(0.03, Math.max(0.01, distance * 0.005))
+      // VERY slow movement - prevent flashing, smooth animation
+      const lerpFactor = Math.min(0.008, Math.max(0.002, distance * 0.001))  // Much slower
       groupRef.current.position.lerp(targetPos.current, lerpFactor)
       
       // Smooth rotation to face movement direction
@@ -258,20 +258,22 @@ function Vehicle({ type, position, targetPosition, color }: VehicleProps) {
           // Check if moving primarily along z-axis (North-South) or x-axis (East-West)
           if (Math.abs(direction.z) > Math.abs(direction.x)) {
             // Moving along z-axis (North-South road)
+            // direction.z > 0 means moving south (positive z), direction.z < 0 means moving north (negative z)
             targetAngle = direction.z > 0 ? 0 : Math.PI  // 0 = south, PI = north
           } else {
             // Moving along x-axis (East-West road)
+            // direction.x > 0 means moving east (positive x), direction.x < 0 means moving west (negative x)
             targetAngle = direction.x > 0 ? Math.PI / 2 : -Math.PI / 2  // PI/2 = east, -PI/2 = west
           }
           
-          // Smooth rotation interpolation
+          // Smooth rotation interpolation - VERY slow to prevent dancing
           let currentAngle = groupRef.current.rotation.y
           let diff = targetAngle - currentAngle
           // Normalize angle difference to [-PI, PI]
           while (diff > Math.PI) diff -= 2 * Math.PI
           while (diff < -Math.PI) diff += 2 * Math.PI
-          // Slower, smoother rotation
-          groupRef.current.rotation.y += diff * 0.1
+          // Much slower, smoother rotation
+          groupRef.current.rotation.y += diff * 0.05  // Reduced from 0.1 to 0.05
         }
       }
     }
