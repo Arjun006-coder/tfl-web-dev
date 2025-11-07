@@ -114,7 +114,8 @@ export default function TrafficScene3D() {
             
             return vehicleEntries.flatMap(([key, trackList]) => {
               const [intersection] = key.split('-')
-              const intersectionPos = intersection === 'int1' ? [-45, 0, 0] as [number, number, number] : [45, 0, 0] as [number, number, number]
+              // Only int1, centered at origin
+              const intersectionPos = [0, 0, 0] as [number, number, number]
               
               return trackList.map((track) => {
                 console.log(`[TrafficScene3D] Rendering track ${track.track_id} at (${track.world_x}, ${track.world_y}), type=${track.vehicleType}`)

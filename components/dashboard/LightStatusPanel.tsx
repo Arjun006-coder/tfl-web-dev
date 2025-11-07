@@ -6,15 +6,12 @@ import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Circle } from 'lucide-react'
 
+// Only show intersection 1
 const lanes = [
   { intersection: 'int1', lane: 'north', label: 'Intersection 1 - North' },
   { intersection: 'int1', lane: 'south', label: 'Intersection 1 - South' },
   { intersection: 'int1', lane: 'east', label: 'Intersection 1 - East' },
   { intersection: 'int1', lane: 'west', label: 'Intersection 1 - West' },
-  { intersection: 'int2', lane: 'north', label: 'Intersection 2 - North' },
-  { intersection: 'int2', lane: 'south', label: 'Intersection 2 - South' },
-  { intersection: 'int2', lane: 'east', label: 'Intersection 2 - East' },
-  { intersection: 'int2', lane: 'west', label: 'Intersection 2 - West' },
 ]
 
 function CountdownTimer({ duration, color, updatedAt }: { duration: number; color: string; updatedAt?: string }) {
