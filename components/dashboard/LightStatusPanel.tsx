@@ -19,41 +19,10 @@ function CountdownTimer({ duration, color, updatedAt }: { duration: number; colo
   const startTimeRef = useRef<number | null>(null)
   
   useEffect(() => {
-    // Reset when duration, updatedAt, or color changes
+    // Simple countdown: calculate from timestamp if available
     if (duration > 0 && duration <= 120) {
-      if (updatedAt) {
-        try {
-          const updateTime = new Date(updatedAt).getTime()
-          const now = Date.now()
-          const elapsed = Math.floor((now - updateTime) / 1000)
-          const remaining = Math.max(0, duration - elapsed)
-          
-          // Set initial time left
-          setTimeLeft(remaining)
-          
-          // Calculate when the phase started (for countdown)
-          startTimeRef.current = now - (elapsed * 1000)
-        } catch (e) {
-          // If timestamp invalid, use duration and start countdown now
-          setTimeLeft(duration)
-          startTimeRef.current = Date.now()
-        }
-      } else {
-        // No timestamp, start countdown from duration
-        setTimeLeft(duration)
-        startTimeRef.current = Date.now()
-      }
-    } else {
-      setTimeLeft(0)
-      startTimeRef.current = null
-      return
-    }
-    
-    // Update countdown every 100ms for smooth display
-    const interval = setInterval(() => {
-      if (startTimeRef.current !== null && duration > 0) {
+      const updateTimer = () => {
         if (updatedAt) {
-          // Use timestamp-based calculation for accuracy
           try {
             const updateTime = new Date(updatedAt).getTime()
             const now = Date.now()
@@ -61,23 +30,23 @@ function CountdownTimer({ duration, color, updatedAt }: { duration: number; colo
             const remaining = Math.max(0, duration - elapsed)
             setTimeLeft(Math.floor(remaining))
           } catch (e) {
-            // Fallback to duration-based countdown
-            const elapsed = (Date.now() - startTimeRef.current) / 1000
-            const remaining = Math.max(0, duration - elapsed)
-            setTimeLeft(Math.floor(remaining))
+            setTimeLeft(0)
           }
         } else {
-          // No timestamp, use duration-based countdown
-          const elapsed = (Date.now() - startTimeRef.current) / 1000
-          const remaining = Math.max(0, duration - elapsed)
-          setTimeLeft(Math.floor(remaining))
+          // No timestamp - show duration as fallback
+          setTimeLeft(duration)
         }
-      } else {
-        setTimeLeft(0)
       }
-    }, 100)
-    
-    return () => clearInterval(interval)
+      
+      // Update immediately
+      updateTimer()
+      
+      // Update every 100ms
+      const interval = setInterval(updateTimer, 100)
+      return () => clearInterval(interval)
+    } else {
+      setTimeLeft(0)
+    }
   }, [duration, updatedAt, color])
   
   const percentage = duration > 0 ? (timeLeft / duration) * 100 : 0
