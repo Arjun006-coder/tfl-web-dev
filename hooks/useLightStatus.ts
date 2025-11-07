@@ -101,7 +101,7 @@ export function useLightStatus() {
         }
       })
     
-    // Poll every 1 second as backup for real-time updates (faster than 2s)
+    // Poll every 0.5 seconds for guaranteed updates (faster than real-time subscription)
     const pollInterval = setInterval(async () => {
       try {
         const { data: lights, error } = await supabase
@@ -111,7 +111,12 @@ export function useLightStatus() {
           .order('updated_at', { ascending: false })
           .limit(8)
         
-        if (!error && lights) {
+        if (error) {
+          console.error('Error polling light status:', error)
+          return
+        }
+        
+        if (lights && lights.length > 0) {
           const grouped: LightStatusMap = {}
           lights.forEach((light: LightStatus) => {
             const key = `${light.intersection}-${light.lane}`
@@ -122,17 +127,12 @@ export function useLightStatus() {
               updatedAt: light.updated_at
             }
           })
-          // Smart merge: only update if new data is more recent
+          
+          // Always update with latest data from polling
           setData(prev => {
             const merged = { ...prev }
             Object.keys(grouped).forEach(key => {
-              const newItem = grouped[key]
-              const oldItem = prev[key]
-              // Update if no old data OR new data is more recent
-              if (!oldItem || !oldItem.updatedAt || 
-                  (newItem.updatedAt && new Date(newItem.updatedAt) > new Date(oldItem.updatedAt))) {
-                merged[key] = newItem
-              }
+              merged[key] = grouped[key]
             })
             return merged
           })
@@ -140,7 +140,7 @@ export function useLightStatus() {
       } catch (err) {
         console.error('Error polling light status:', err)
       }
-    }, 1000)
+    }, 500)  // Poll every 0.5 seconds for faster updates
     
     return () => {
       clearInterval(pollInterval)
