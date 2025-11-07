@@ -16,7 +16,6 @@ const lanes = [
 
 function CountdownTimer({ duration, color, updatedAt }: { duration: number; color: string; updatedAt?: string }) {
   const [timeLeft, setTimeLeft] = useState<number>(0)
-  const startTimeRef = useRef<number | null>(null)
   
   useEffect(() => {
     // Simple countdown: calculate from timestamp if available
