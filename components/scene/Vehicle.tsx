@@ -13,6 +13,7 @@ type VehicleProps = {
   position: [number, number, number]
   targetPosition: [number, number, number]
   color?: string  // Optional dynamic color override
+  lane?: 'north' | 'south' | 'east' | 'west'  // Lane for correct initial rotation
 }
 
 const vehicleConfig = {
