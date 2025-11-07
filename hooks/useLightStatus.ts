@@ -59,12 +59,25 @@ export function useLightStatus() {
         {
           event: '*',  // Listen to all events (INSERT, UPDATE, DELETE)
           schema: 'public',
-          table: 'light_status'
+          table: 'light_status',
+          filter: 'intersection=eq.int1'  // Only listen to int1 for now
         },
         (payload) => {
           console.log('Light status update received:', payload)
           const newData = payload.new as LightStatus
-          if (!newData) return
+          if (!newData) {
+            // Handle DELETE events
+            if (payload.eventType === 'DELETE' && payload.old) {
+              const oldData = payload.old as LightStatus
+              const key = `${oldData.intersection}-${oldData.lane}`
+              setData(prev => {
+                const updated = { ...prev }
+                delete updated[key]
+                return updated
+              })
+            }
+            return
+          }
           
           const key = `${newData.intersection}-${newData.lane}`
           
@@ -74,16 +87,27 @@ export function useLightStatus() {
               color: newData.color,
               duration: newData.duration,
               reason: newData.reason,
-              updatedAt: newData.updated_at
+              updatedAt: newData.updated_at || new Date().toISOString()  // Fallback to now if missing
             }
           }))
         }
       )
       .subscribe((status) => {
         console.log('Light status subscription status:', status)
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to light status updates')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Error subscribing to light status updates')
+        }
       })
     
+    // Also poll every 2 seconds as backup
+    const pollInterval = setInterval(() => {
+      fetchInitial()
+    }, 2000)
+    
     return () => {
+      clearInterval(pollInterval)
       supabase.removeChannel(channel)
     }
   }, [])
