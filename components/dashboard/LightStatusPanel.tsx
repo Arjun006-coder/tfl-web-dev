@@ -15,30 +15,35 @@ const lanes = [
 ]
 
 function CountdownTimer({ duration, color, updatedAt }: { duration: number; color: string; updatedAt?: string }) {
-  const [timeLeft, setTimeLeft] = useState<number>(0)
+  const [timeLeft, setTimeLeft] = useState<number>(duration || 0)
+  const startTimeRef = useRef<number | null>(null)
   
   useEffect(() => {
-    // Always show countdown if duration is valid
+    // Reset when duration or updatedAt changes
     if (duration > 0 && duration <= 120) {
-      const updateTimer = () => {
-        if (updatedAt) {
-          try {
-            const updateTime = new Date(updatedAt).getTime()
-            if (isNaN(updateTime)) {
-              // Invalid timestamp - show duration
-              setTimeLeft(duration)
-              return
-            }
-            const now = Date.now()
-            const elapsed = Math.floor((now - updateTime) / 1000)
-            const remaining = Math.max(0, duration - elapsed)
-            setTimeLeft(remaining)
-          } catch (e) {
-            // If timestamp parsing fails, show duration
-            setTimeLeft(duration)
+      // Use updatedAt if available, otherwise use current time as start
+      if (updatedAt) {
+        try {
+          const updateTime = new Date(updatedAt).getTime()
+          if (!isNaN(updateTime)) {
+            startTimeRef.current = updateTime
+          } else {
+            startTimeRef.current = Date.now()
           }
+        } catch (e) {
+          startTimeRef.current = Date.now()
+        }
+      } else {
+        startTimeRef.current = Date.now()
+      }
+      
+      const updateTimer = () => {
+        if (startTimeRef.current) {
+          const now = Date.now()
+          const elapsed = Math.floor((now - startTimeRef.current) / 1000)
+          const remaining = Math.max(0, duration - elapsed)
+          setTimeLeft(remaining)
         } else {
-          // No timestamp - show duration as fallback
           setTimeLeft(duration)
         }
       }
@@ -50,7 +55,6 @@ function CountdownTimer({ duration, color, updatedAt }: { duration: number; colo
       const interval = setInterval(updateTimer, 100)
       return () => clearInterval(interval)
     } else {
-      // Invalid duration - show 0
       setTimeLeft(0)
     }
   }, [duration, updatedAt, color])
