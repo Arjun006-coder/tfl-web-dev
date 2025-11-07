@@ -70,44 +70,64 @@ export default function WorldVehicle({ vehicle, intersectionPosition, intersecti
       return { x: smoothedX, y: smoothedY, lane }
     }
     
-    // Smooth interpolation - USE ACTUAL VEHICLE POSITIONS, ensure forward-only movement
-    if (lane === 'north') {
-      // North: moving south (world_y increases 0.05 -> 0.35)
-      // Only allow forward movement (y increases), never backward
-      const targetY = Math.max(0.05, Math.min(0.35, vehicle.world_y))
-      if (smoothedY === null || targetY >= smoothedY) {
-        // Forward movement or first update
-        smoothedY = smoothedY === null ? targetY : smoothedY + (targetY - smoothedY) * 0.2
+    // CRITICAL: Check if position changed - if not, vehicle is stopped, use exact position
+    const positionChanged = Math.abs(vehicle.world_x - smoothedX) > 0.001 || Math.abs(vehicle.world_y - smoothedY) > 0.001
+    
+    if (!positionChanged) {
+      // Position hasn't changed - vehicle is stopped, use exact position
+      smoothedX = vehicle.world_x
+      smoothedY = vehicle.world_y
+    } else {
+      // Position changed - smooth interpolation with forward-only movement
+      if (lane === 'north') {
+        // North: moving south (world_y increases 0.05 -> 0.35)
+        // Only allow forward movement (y increases), never backward
+        const targetY = Math.max(0.05, Math.min(0.35, vehicle.world_y))
+        if (smoothedY === null || targetY >= smoothedY) {
+          // Forward movement or first update
+          smoothedY = smoothedY === null ? targetY : smoothedY + (targetY - smoothedY) * 0.2
+        } else {
+          // Trying to move backward - keep current position (stopped)
+          smoothedY = smoothedY
+        }
+        smoothedX = 0.5
+      } else if (lane === 'south') {
+        // South: moving north (world_y decreases 0.95 -> 0.65)
+        // Only allow forward movement (y decreases), never backward
+        const targetY = Math.max(0.65, Math.min(0.95, vehicle.world_y))
+        if (smoothedY === null || targetY <= smoothedY) {
+          // Forward movement or first update
+          smoothedY = smoothedY === null ? targetY : smoothedY + (targetY - smoothedY) * 0.2
+        } else {
+          // Trying to move backward - keep current position (stopped)
+          smoothedY = smoothedY
+        }
+        smoothedX = 0.5
+      } else if (lane === 'east') {
+        // East: moving west (world_x decreases 0.95 -> 0.65)
+        // Only allow forward movement (x decreases), never backward
+        const targetX = Math.max(0.65, Math.min(0.95, vehicle.world_x))
+        if (smoothedX === null || targetX <= smoothedX) {
+          // Forward movement or first update
+          smoothedX = smoothedX === null ? targetX : smoothedX + (targetX - smoothedX) * 0.2
+        } else {
+          // Trying to move backward - keep current position (stopped)
+          smoothedX = smoothedX
+        }
+        smoothedY = 0.5
+      } else {  // west
+        // West: moving east (world_x increases 0.05 -> 0.35)
+        // Only allow forward movement (x increases), never backward
+        const targetX = Math.max(0.05, Math.min(0.35, vehicle.world_x))
+        if (smoothedX === null || targetX >= smoothedX) {
+          // Forward movement or first update
+          smoothedX = smoothedX === null ? targetX : smoothedX + (targetX - smoothedX) * 0.2
+        } else {
+          // Trying to move backward - keep current position (stopped)
+          smoothedX = smoothedX
+        }
+        smoothedY = 0.5
       }
-      // Keep X centered on road
-      smoothedX = 0.5
-    } else if (lane === 'south') {
-      // South: moving north (world_y decreases 0.95 -> 0.65)
-      // Only allow forward movement (y decreases), never backward
-      const targetY = Math.max(0.65, Math.min(0.95, vehicle.world_y))
-      if (smoothedY === null || targetY <= smoothedY) {
-        // Forward movement or first update
-        smoothedY = smoothedY === null ? targetY : smoothedY + (targetY - smoothedY) * 0.2
-      }
-      smoothedX = 0.5
-    } else if (lane === 'east') {
-      // East: moving west (world_x decreases 0.95 -> 0.65)
-      // Only allow forward movement (x decreases), never backward
-      const targetX = Math.max(0.65, Math.min(0.95, vehicle.world_x))
-      if (smoothedX === null || targetX <= smoothedX) {
-        // Forward movement or first update
-        smoothedX = smoothedX === null ? targetX : smoothedX + (targetX - smoothedX) * 0.2
-      }
-      smoothedY = 0.5
-    } else {  // west
-      // West: moving east (world_x increases 0.05 -> 0.35)
-      // Only allow forward movement (x increases), never backward
-      const targetX = Math.max(0.05, Math.min(0.35, vehicle.world_x))
-      if (smoothedX === null || targetX >= smoothedX) {
-        // Forward movement or first update
-        smoothedX = smoothedX === null ? targetX : smoothedX + (targetX - smoothedX) * 0.2
-      }
-      smoothedY = 0.5
     }
     
     // Update refs
