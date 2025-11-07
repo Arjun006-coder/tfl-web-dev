@@ -5,9 +5,10 @@ import Vehicle from './Vehicle'
 
 export interface WorldVehicleData {
   track_id: string
-  world_x: number  // Normalized 0-1
-  world_y: number  // Normalized 0-1
+  world_x: number  // Normalized 0-1: 0=west, 0.5=center, 1=east
+  world_y: number  // Normalized 0-1: 0=north, 0.5=center, 1=south
   vehicleType: 'car' | 'bike' | 'bus' | 'truck' | 'emergency'
+  lane?: string  // Optional lane info from database
 }
 
 type WorldVehicleProps = {
@@ -19,110 +20,154 @@ type WorldVehicleProps = {
 /**
  * Renders a vehicle positioned using world coordinates (normalized 0-1)
  * Maps normalized coordinates to 3D scene positions
+ * Supports all 4 lanes: North, South, East, West
  */
 export default function WorldVehicle({ vehicle, intersectionPosition, intersectionSize = 24 }: WorldVehicleProps) {
-  // Track previous position and world_y for smooth, ordered movement
+  // Track previous position for smooth movement
   const prevPositionRef = useRef<[number, number, number] | null>(null)
-  const prevWorldYRef = useRef<number | null>(null)
   const targetPositionRef = useRef<[number, number, number]>([0, 0, 0])
+  const smoothedWorldXRef = useRef<number | null>(null)
   const smoothedWorldYRef = useRef<number | null>(null)
   
-  // Smooth world_y to prevent jumps - only allow forward progress
-  const smoothedWorldY = useMemo(() => {
+  // Determine lane from coordinates or lane field
+  const determineLane = (world_x: number, world_y: number, lane?: string): 'north' | 'south' | 'east' | 'west' => {
+    if (lane) {
+      return lane as 'north' | 'south' | 'east' | 'west'
+    }
+    
+    // Determine lane from coordinates
+    // North: world_y < 0.4
+    // South: world_y > 0.6
+    // East: world_x > 0.6
+    // West: world_x < 0.4
+    
+    if (world_y < 0.4) return 'north'
+    if (world_y > 0.6) return 'south'
+    if (world_x > 0.6) return 'east'
+    if (world_x < 0.4) return 'west'
+    
+    // Default based on which is closer to edge
+    const distFromCenterX = Math.abs(world_x - 0.5)
+    const distFromCenterY = Math.abs(world_y - 0.5)
+    
+    if (distFromCenterY > distFromCenterX) {
+      return world_y < 0.5 ? 'north' : 'south'
+    } else {
+      return world_x > 0.5 ? 'east' : 'west'
+    }
+  }
+  
+  // Smooth coordinates to prevent jumps
+  const smoothedCoords = useMemo(() => {
+    const lane = determineLane(vehicle.world_x, vehicle.world_y, vehicle.lane)
+    
+    // Initialize smoothed values
+    if (smoothedWorldXRef.current === null) {
+      smoothedWorldXRef.current = vehicle.world_x
+    }
     if (smoothedWorldYRef.current === null) {
       smoothedWorldYRef.current = vehicle.world_y
-      return vehicle.world_y
     }
     
-    const prevY = smoothedWorldYRef.current
-    const currentY = vehicle.world_y
+    let smoothedX = smoothedWorldXRef.current
+    let smoothedY = smoothedWorldYRef.current
     
-    // Determine lane
-    const isNorthLane = prevY < 0.5
-    const isSouthLane = prevY >= 0.5
-    
-    // Prevent large jumps - filter out position changes > 0.1 (teleporting)
-    const jumpThreshold = 0.1
-    if (Math.abs(currentY - prevY) > jumpThreshold) {
-      // Large jump detected - keep previous position (vehicle might have been lost/re-detected)
-      return prevY
+    // Prevent large jumps (teleporting)
+    const jumpThreshold = 0.15
+    if (Math.abs(vehicle.world_x - smoothedX) > jumpThreshold || 
+        Math.abs(vehicle.world_y - smoothedY) > jumpThreshold) {
+      // Large jump - keep previous position
+      return { x: smoothedX, y: smoothedY, lane }
     }
     
-    // For north lane: world_y should increase (moving toward intersection, 0.0 -> 0.4)
-    // For south lane: world_y should increase (moving away from intersection, 0.6 -> 1.0)
-    if (isNorthLane && currentY < 0.5) {
-      // North lane: only allow forward progress (increasing y)
-      if (currentY < prevY) {
-        return prevY  // Don't allow backward movement
-      }
-      // Smooth interpolation
-      return prevY + (currentY - prevY) * 0.3  // 30% of change
-    } else if (isSouthLane && currentY >= 0.5) {
-      // South lane: only allow forward progress (increasing y)
-      if (currentY < prevY) {
-        return prevY  // Don't allow backward movement
-      }
-      // Smooth interpolation
-      return prevY + (currentY - prevY) * 0.3  // 30% of change
-    } else {
-      // Lane changed - reset
-      smoothedWorldYRef.current = currentY
-      return currentY
+    // Smooth interpolation (only allow forward progress)
+    if (lane === 'north') {
+      // North: moving south (world_y increases 0.0 -> 0.4)
+      smoothedY = Math.max(smoothedY, Math.min(vehicle.world_y, 0.4))
+      smoothedY = smoothedY + (vehicle.world_y - smoothedY) * 0.2
+      smoothedX = 0.5  // Always center on North-South road
+    } else if (lane === 'south') {
+      // South: moving north (world_y decreases 1.0 -> 0.6, but we track as increasing 0.6 -> 1.0)
+      smoothedY = Math.max(smoothedY, Math.min(vehicle.world_y, 0.95))
+      smoothedY = smoothedY + (vehicle.world_y - smoothedY) * 0.2
+      smoothedX = 0.5  // Always center on North-South road
+    } else if (lane === 'east') {
+      // East: moving west (world_x decreases 1.0 -> 0.6, but we track as increasing 0.6 -> 1.0)
+      smoothedX = Math.max(smoothedX, Math.min(vehicle.world_x, 0.95))
+      smoothedX = smoothedX + (vehicle.world_x - smoothedX) * 0.2
+      smoothedY = 0.5  // Always center on East-West road
+    } else {  // west
+      // West: moving east (world_x increases 0.0 -> 0.4)
+      smoothedX = Math.max(smoothedX, Math.min(vehicle.world_x, 0.4))
+      smoothedX = smoothedX + (vehicle.world_x - smoothedX) * 0.2
+      smoothedY = 0.5  // Always center on East-West road
     }
-  }, [vehicle.world_y])
-  
-  // Update smoothed value
-  useEffect(() => {
-    smoothedWorldYRef.current = smoothedWorldY
-  }, [smoothedWorldY])
+    
+    // Update refs
+    smoothedWorldXRef.current = smoothedX
+    smoothedWorldYRef.current = smoothedY
+    
+    return { x: smoothedX, y: smoothedY, lane }
+  }, [vehicle.world_x, vehicle.world_y, vehicle.lane])
   
   // Map normalized coordinates (0-1) to 3D scene coordinates
   // ALWAYS place vehicles on roads, NEVER on grass or in intersection center
   const position3D = useMemo(() => {
     const [intersectionX, intersectionY, intersectionZ] = intersectionPosition
+    const { x: world_x, y: world_y, lane } = smoothedCoords
     
-    // Use smoothed world_y for consistent movement
-    let clamped_y = smoothedWorldY
+    // Road configuration
+    const roadExtent = 40  // How far roads extend from intersection
+    const intersectionHalfSize = intersectionSize / 2  // 12 units
     
-    // Constrain world_y to valid road areas (avoid intersection center 0.4-0.6)
-    if (clamped_y >= 0.4 && clamped_y <= 0.6) {
-      // If in intersection center, push to nearest lane
-      clamped_y = clamped_y < 0.5 ? 0.35 : 0.65
-    }
-    
-    const isNorthLane = clamped_y < 0.5
-    const isSouthLane = clamped_y >= 0.5
-    
-    // ALWAYS place vehicles on the center of the north-south road
-    const x = intersectionX  // Center of north-south road (x coordinate)
+    let x = intersectionX
     let z = intersectionZ
     
-    if (isNorthLane) {
-      // North lane: vehicles on vertical road, moving from top (negative z) toward intersection
+    if (lane === 'north') {
+      // North lane: vehicles on vertical road, moving from north (negative z) toward intersection
       // Map world_y (0.0 to 0.4) to z position
-      // 0.0 = far north, 0.4 = near intersection (but not in it)
-      const normalized_y = Math.max(0.0, Math.min(0.4, clamped_y))
+      const normalized_y = Math.max(0.0, Math.min(0.4, world_y))
       const progress = normalized_y / 0.4  // Normalize to 0-1
-      z = intersectionZ - 25 - (progress * 25)  // Start at -50, end at -25 (before intersection)
-      // Ensure vehicles stay on road center (x = intersectionX)
-    } else {
-      // South lane: vehicles on vertical road, moving from bottom (positive z) toward intersection
+      z = intersectionZ - roadExtent + (progress * (roadExtent - intersectionHalfSize))
+      x = intersectionX  // Always center on North-South road
+    } else if (lane === 'south') {
+      // South lane: vehicles on vertical road, moving from south (positive z) toward intersection
       // Map world_y (0.6 to 1.0) to z position
-      // 0.6 = near intersection, 1.0 = far south
-      const normalized_y = Math.max(0.6, Math.min(1.0, clamped_y))
+      const normalized_y = Math.max(0.6, Math.min(1.0, world_y))
       const progress = (normalized_y - 0.6) / 0.4  // Normalize to 0-1
-      z = intersectionZ + 25 + (progress * 25)  // Start at +25 (after intersection), end at +50
-      // Ensure vehicles stay on road center (x = intersectionX)
+      z = intersectionZ + roadExtent - (progress * (roadExtent - intersectionHalfSize))
+      x = intersectionX  // Always center on North-South road
+    } else if (lane === 'east') {
+      // East lane: vehicles on horizontal road, moving from east (positive x) toward intersection
+      // Map world_x (0.6 to 1.0) to x position
+      const normalized_x = Math.max(0.6, Math.min(1.0, world_x))
+      const progress = (normalized_x - 0.6) / 0.4  // Normalize to 0-1
+      x = intersectionX + roadExtent - (progress * (roadExtent - intersectionHalfSize))
+      z = intersectionZ  // Always center on East-West road
+    } else {  // west
+      // West lane: vehicles on horizontal road, moving from west (negative x) toward intersection
+      // Map world_x (0.0 to 0.4) to x position
+      const normalized_x = Math.max(0.0, Math.min(0.4, world_x))
+      const progress = normalized_x / 0.4  // Normalize to 0-1
+      x = intersectionX - roadExtent + (progress * (roadExtent - intersectionHalfSize))
+      z = intersectionZ  // Always center on East-West road
     }
     
     // Final safety check: ensure vehicles are NEVER in intersection center
-    const distFromCenter = Math.abs(z - intersectionZ)
-    if (distFromCenter < 15) {
-      // Too close to center, push out
-      if (isNorthLane) {
-        z = intersectionZ - 20
-      } else {
-        z = intersectionZ + 20
+    const distFromCenterX = Math.abs(x - intersectionX)
+    const distFromCenterZ = Math.abs(z - intersectionZ)
+    const minDist = intersectionHalfSize + 2
+    
+    if (distFromCenterX < minDist && distFromCenterZ < minDist) {
+      // Too close to center, push out based on lane
+      if (lane === 'north') {
+        z = intersectionZ - minDist
+      } else if (lane === 'south') {
+        z = intersectionZ + minDist
+      } else if (lane === 'east') {
+        x = intersectionX + minDist
+      } else {  // west
+        x = intersectionX - minDist
       }
     }
     
@@ -130,7 +175,7 @@ export default function WorldVehicle({ vehicle, intersectionPosition, intersecti
     const y = intersectionY + 1.5
     
     return [x, y, z] as [number, number, number]
-  }, [smoothedWorldY, intersectionPosition, intersectionSize])
+  }, [smoothedCoords, intersectionPosition, intersectionSize])
   
   // Update target position when world coordinates change
   useEffect(() => {
@@ -159,4 +204,3 @@ export default function WorldVehicle({ vehicle, intersectionPosition, intersecti
     />
   )
 }
-
