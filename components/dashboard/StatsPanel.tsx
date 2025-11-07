@@ -3,20 +3,27 @@
 import { Car, AlertTriangle, Clock, TrendingUp } from 'lucide-react'
 import { StatCard } from '@/components/ui/StatCard'
 import { useVehicleDetections } from '@/hooks/useVehicleDetections'
+import { useVehicleTracks } from '@/hooks/useVehicleTracks'
 import { useEmergencyEvents } from '@/hooks/useEmergencyEvents'
 import { useStats } from '@/hooks/useStats'
 import { motion } from 'framer-motion'
 
 export default function StatsPanel() {
   const vehicleData = useVehicleDetections()
+  const { vehicleTracks } = useVehicleTracks()
   const emergencies = useEmergencyEvents()
   const stats = useStats()
   
-  // Calculate total vehicles currently in system
-  const totalVehicles = Object.values(vehicleData).reduce((sum, lane) => 
-    sum + (lane?.cars || 0) + (lane?.bikes || 0) + (lane?.buses || 0) + (lane?.trucks || 0), 
-    0
-  )
+  // Calculate total vehicles currently in system from vehicle tracks (more accurate)
+  const totalVehiclesFromTracks = Object.values(vehicleTracks).flat().length
+  
+  // Fallback to vehicleData if tracks are empty
+  const totalVehicles = totalVehiclesFromTracks > 0 
+    ? totalVehiclesFromTracks
+    : Object.values(vehicleData).reduce((sum, lane) => 
+        sum + (lane?.cars || 0) + (lane?.bikes || 0) + (lane?.buses || 0) + (lane?.trucks || 0), 
+        0
+      )
   
   return (
     <div>

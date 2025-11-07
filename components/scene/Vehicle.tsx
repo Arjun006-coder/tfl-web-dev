@@ -291,20 +291,25 @@ function Vehicle({ type, position, targetPosition, color, lane }: VehicleProps) 
       
       let targetAngle: number
       
-      // Determine primary movement axis
-      if (distZ > distX) {
+      // Determine primary movement axis - use lane if available for accuracy
+      if (lane) {
+        // Use lane to determine correct rotation
+        if (lane === 'north' || lane === 'south') {
+          // North-South road - face along z-axis
+          targetAngle = lane === 'north' ? 0 : Math.PI  // North faces south (0), South faces north (PI)
+        } else {
+          // East-West road - face along x-axis
+          targetAngle = lane === 'east' ? -Math.PI / 2 : Math.PI / 2  // East faces west (-PI/2), West faces east (PI/2)
+        }
+      } else if (distZ > distX) {
         // Moving primarily along z-axis (North-South road)
-        // direction.z > 0 = moving south (toward positive z) = face 0 radians
-        // direction.z < 0 = moving north (toward negative z) = face PI radians
         targetAngle = direction.z > 0 ? 0 : Math.PI
       } else if (distX > 0.1) {
         // Moving primarily along x-axis (East-West road)
-        // direction.x > 0 = moving east (toward positive x) = face PI/2 radians
-        // direction.x < 0 = moving west (toward negative x) = face -PI/2 radians
         targetAngle = direction.x > 0 ? Math.PI / 2 : -Math.PI / 2
       } else {
-        // Not moving much - maintain current rotation or set based on lane
-        return  // Don't change rotation if not moving
+        // Not moving much - maintain current rotation
+        return
       }
       
       // Smooth rotation interpolation
