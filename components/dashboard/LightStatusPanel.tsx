@@ -48,9 +48,14 @@ function CountdownTimer({ duration, color, updatedAt }: { duration: number; colo
       const updateTimer = () => {
         if (startTimeRef.current && durationRef.current > 0) {
           const now = Date.now()
-          const elapsed = Math.floor((now - startTimeRef.current) / 1000)
-          const remaining = Math.max(0, durationRef.current - elapsed)
+          const elapsed = (now - startTimeRef.current) / 1000  // Use decimal for accuracy
+          const remaining = Math.max(0, Math.ceil(durationRef.current - elapsed))  // Round up to show full seconds
           setTimeLeft(remaining)
+          
+          // Debug log every second
+          if (Math.floor(elapsed) % 1 === 0 || remaining < 5) {
+            console.log(`[Countdown] ${color} - elapsed: ${elapsed.toFixed(1)}s, remaining: ${remaining}s, duration: ${durationRef.current}s`)
+          }
         } else {
           setTimeLeft(durationRef.current)
         }
