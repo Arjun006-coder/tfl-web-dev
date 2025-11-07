@@ -103,14 +103,16 @@ export default function WorldVehicle({ vehicle, intersectionPosition, intersecti
       // 0.0 = far north, 0.4 = near intersection (but not in it)
       const normalized_y = Math.max(0.0, Math.min(0.4, clamped_y))
       const progress = normalized_y / 0.4  // Normalize to 0-1
-      z = intersectionZ - 20 - (progress * 30)  // Start at -50, end at -20 (before intersection)
+      z = intersectionZ - 25 - (progress * 25)  // Start at -50, end at -25 (before intersection)
+      // Ensure vehicles stay on road center (x = intersectionX)
     } else {
       // South lane: vehicles on vertical road, moving from bottom (positive z) toward intersection
       // Map world_y (0.6 to 1.0) to z position
       // 0.6 = near intersection, 1.0 = far south
       const normalized_y = Math.max(0.6, Math.min(1.0, clamped_y))
       const progress = (normalized_y - 0.6) / 0.4  // Normalize to 0-1
-      z = intersectionZ + 20 + (progress * 30)  // Start at +20 (after intersection), end at +50
+      z = intersectionZ + 25 + (progress * 25)  // Start at +25 (after intersection), end at +50
+      // Ensure vehicles stay on road center (x = intersectionX)
     }
     
     // Final safety check: ensure vehicles are NEVER in intersection center
