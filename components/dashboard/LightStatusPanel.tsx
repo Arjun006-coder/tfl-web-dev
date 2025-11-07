@@ -17,25 +17,35 @@ const lanes = [
   { intersection: 'int2', lane: 'west', label: 'Intersection 2 - West' },
 ]
 
-function CountdownTimer({ duration, color }: { duration: number; color: string }) {
+function CountdownTimer({ duration, color, updatedAt }: { duration: number; color: string; updatedAt?: string }) {
   const [timeLeft, setTimeLeft] = useState(duration)
-  const [startTime, setStartTime] = useState(Date.now())
   
   useEffect(() => {
-    // Reset timer when duration or color changes
-    setTimeLeft(duration)
-    setStartTime(Date.now())
-  }, [duration, color])
-  
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startTime) / 1000)
-      const remaining = Math.max(0, duration - elapsed)
-      setTimeLeft(remaining)
-    }, 100)  // Update every 100ms for smoother countdown
+    if (!updatedAt || duration <= 0) {
+      setTimeLeft(0)
+      return
+    }
+    
+    const updateTimer = () => {
+      try {
+        const updateTime = new Date(updatedAt).getTime()
+        const now = Date.now()
+        const elapsed = Math.floor((now - updateTime) / 1000)
+        const remaining = Math.max(0, duration - elapsed)
+        setTimeLeft(remaining)
+      } catch (e) {
+        setTimeLeft(0)
+      }
+    }
+    
+    // Update immediately
+    updateTimer()
+    
+    // Update every second
+    const interval = setInterval(updateTimer, 1000)
     
     return () => clearInterval(interval)
-  }, [duration, startTime])
+  }, [duration, updatedAt, color])
   
   const percentage = duration > 0 ? (timeLeft / duration) * 100 : 0
   return (
@@ -102,7 +112,11 @@ export default function LightStatusPanel() {
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-gray-400 mb-1">Time Remaining</p>
-                    <CountdownTimer duration={status?.duration || 30} color={status?.color || 'red'} />
+                    <CountdownTimer 
+                      duration={status?.duration || 30} 
+                      color={status?.color || 'red'} 
+                      updatedAt={status?.updatedAt}
+                    />
                   </div>
                 </div>
               </motion.div>

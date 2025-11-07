@@ -7,6 +7,7 @@ type LightStatusMap = Record<string, {
   color: 'red' | 'yellow' | 'green'
   duration: number
   reason?: string
+  updatedAt?: string
 }>
 
 export function useLightStatus() {
@@ -27,7 +28,8 @@ export function useLightStatus() {
         grouped[key] = {
           color: light.color,
           duration: light.duration,
-          reason: light.reason
+          reason: light.reason,
+          updatedAt: light.updated_at || light.created_at
         }
       })
       
@@ -55,7 +57,8 @@ export function useLightStatus() {
             [key]: {
               color: newData.color,
               duration: newData.duration,
-              reason: newData.reason
+              reason: newData.reason,
+              updatedAt: newData.updated_at || newData.created_at
             }
           }))
         }
