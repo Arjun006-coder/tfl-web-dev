@@ -21,7 +21,8 @@ function CountdownTimer({ duration, color, updatedAt }: { duration: number; colo
   const [timeLeft, setTimeLeft] = useState(duration)
   
   useEffect(() => {
-    if (!updatedAt || duration <= 0) {
+    if (!updatedAt || duration <= 0 || duration > 120) {
+      // If duration is invalid or too large, reset to 0
       setTimeLeft(0)
       return
     }
@@ -33,6 +34,12 @@ function CountdownTimer({ duration, color, updatedAt }: { duration: number; colo
         const elapsed = Math.floor((now - updateTime) / 1000)
         const remaining = Math.max(0, duration - elapsed)
         setTimeLeft(remaining)
+        
+        // If remaining time is 0 and we're still showing this light, it means phase expired
+        // The backend should have updated it, but if not, clamp to 0
+        if (remaining <= 0) {
+          setTimeLeft(0)
+        }
       } catch (e) {
         setTimeLeft(0)
       }
