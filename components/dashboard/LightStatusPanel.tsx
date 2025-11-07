@@ -19,11 +19,24 @@ const lanes = [
 
 function CountdownTimer({ duration, color }: { duration: number; color: string }) {
   const [timeLeft, setTimeLeft] = useState(duration)
+  const [startTime, setStartTime] = useState(Date.now())
+  
   useEffect(() => {
+    // Reset timer when duration or color changes
     setTimeLeft(duration)
-    const interval = setInterval(() => setTimeLeft(prev => Math.max(0, prev - 1)), 1000)
+    setStartTime(Date.now())
+  }, [duration, color])
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000)
+      const remaining = Math.max(0, duration - elapsed)
+      setTimeLeft(remaining)
+    }, 100)  // Update every 100ms for smoother countdown
+    
     return () => clearInterval(interval)
-  }, [duration])
+  }, [duration, startTime])
+  
   const percentage = duration > 0 ? (timeLeft / duration) * 100 : 0
   return (
     <div className="relative">
