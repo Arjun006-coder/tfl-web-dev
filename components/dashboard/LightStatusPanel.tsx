@@ -18,20 +18,25 @@ function CountdownTimer({ duration, color, updatedAt }: { duration: number; colo
   const [timeLeft, setTimeLeft] = useState<number>(duration || 0)
   const startTimeRef = useRef<number | null>(null)
   const durationRef = useRef<number>(duration || 0)
+  const lastUpdatedAtRef = useRef<string | null>(null)
   
   useEffect(() => {
     // Update duration ref when it changes
     durationRef.current = duration || 0
     
+    // Only reset timer if updatedAt actually changed (new phase started)
+    const updatedAtChanged = updatedAt !== lastUpdatedAtRef.current
+    
     // Reset when duration or updatedAt changes
     if (duration > 0 && duration <= 120) {
       // Use updatedAt if available, otherwise use current time as start
-      if (updatedAt) {
+      if (updatedAt && updatedAtChanged) {
         try {
           const updateTime = new Date(updatedAt).getTime()
           if (!isNaN(updateTime) && updateTime > 0) {
             startTimeRef.current = updateTime
-            console.log(`[Countdown] ${color} - updatedAt: ${updatedAt}, duration: ${duration}, startTime: ${new Date(updateTime).toISOString()}`)
+            lastUpdatedAtRef.current = updatedAt
+            console.log(`[Countdown] ${color} - NEW PHASE - updatedAt: ${updatedAt}, duration: ${duration}, startTime: ${new Date(updateTime).toISOString()}`)
           } else {
             startTimeRef.current = Date.now()
             console.log(`[Countdown] ${color} - Invalid updatedAt, using now, duration: ${duration}`)
@@ -40,9 +45,11 @@ function CountdownTimer({ duration, color, updatedAt }: { duration: number; colo
           startTimeRef.current = Date.now()
           console.log(`[Countdown] ${color} - Error parsing updatedAt, using now, duration: ${duration}`)
         }
-      } else {
-        startTimeRef.current = Date.now()
-        console.log(`[Countdown] ${color} - No updatedAt, using now, duration: ${duration}`)
+      } else if (!startTimeRef.current) {
+        // First time - initialize
+        startTimeRef.current = updatedAt ? new Date(updatedAt).getTime() : Date.now()
+        lastUpdatedAtRef.current = updatedAt || null
+        console.log(`[Countdown] ${color} - INITIAL - duration: ${duration}`)
       }
       
       const updateTimer = () => {
@@ -55,7 +62,7 @@ function CountdownTimer({ duration, color, updatedAt }: { duration: number; colo
           // Debug log every second or when remaining is low
           const elapsedSeconds = Math.floor(elapsed)
           if (elapsedSeconds !== (updateTimer.lastLog || -1) || remaining < 5) {
-            console.log(`[Countdown] ${color} - elapsed: ${elapsed.toFixed(1)}s, remaining: ${remaining}s, duration: ${durationRef.current}s, now: ${new Date(now).toISOString()}, start: ${new Date(startTimeRef.current).toISOString()}`)
+            console.log(`[Countdown] ${color} - elapsed: ${elapsed.toFixed(1)}s, remaining: ${remaining}s, duration: ${durationRef.current}s`)
             updateTimer.lastLog = elapsedSeconds
           }
         } else {
