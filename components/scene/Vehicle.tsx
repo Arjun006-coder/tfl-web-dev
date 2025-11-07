@@ -243,16 +243,27 @@ function Vehicle({ type, position, targetPosition, color }: VehicleProps) {
       groupRef.current.position.lerp(targetPos.current, lerpFactor)
       
       // Smooth rotation to face movement direction
-      // For north-south lanes: vehicles should face along z-axis
-      // North lane: moving south (positive z direction) = 0 radians
-      // South lane: moving north (negative z direction) = Math.PI radians
+      // Determine direction based on movement vector
       if (distance > 0.1) {
         const direction = new Vector3()
           .subVectors(targetPos.current, groupRef.current.position)
           .normalize()
+        
         if (direction.length() > 0) {
           // Calculate target angle based on movement direction
-          const targetAngle = Math.atan2(direction.x, direction.z)
+          // For North-South: direction.z determines angle (0 = south, PI = north)
+          // For East-West: direction.x determines angle (PI/2 = east, -PI/2 = west)
+          let targetAngle: number
+          
+          // Check if moving primarily along z-axis (North-South) or x-axis (East-West)
+          if (Math.abs(direction.z) > Math.abs(direction.x)) {
+            // Moving along z-axis (North-South road)
+            targetAngle = direction.z > 0 ? 0 : Math.PI  // 0 = south, PI = north
+          } else {
+            // Moving along x-axis (East-West road)
+            targetAngle = direction.x > 0 ? Math.PI / 2 : -Math.PI / 2  // PI/2 = east, -PI/2 = west
+          }
+          
           // Smooth rotation interpolation
           let currentAngle = groupRef.current.rotation.y
           let diff = targetAngle - currentAngle
@@ -260,20 +271,6 @@ function Vehicle({ type, position, targetPosition, color }: VehicleProps) {
           while (diff > Math.PI) diff -= 2 * Math.PI
           while (diff < -Math.PI) diff += 2 * Math.PI
           // Slower, smoother rotation
-          groupRef.current.rotation.y += diff * 0.08
-        }
-      } else {
-        // When close to target, maintain current rotation (prevent jitter)
-        // Vehicles on north-south road should face along z-axis
-        const currentZ = groupRef.current.position.z
-        const targetZ = targetPos.current.z
-        if (Math.abs(currentZ - targetZ) > 0.5) {
-          // Moving along z-axis: face 0 (north->south) or PI (south->north)
-          const targetAngle = currentZ < targetZ ? 0 : Math.PI
-          let currentAngle = groupRef.current.rotation.y
-          let diff = targetAngle - currentAngle
-          while (diff > Math.PI) diff -= 2 * Math.PI
-          while (diff < -Math.PI) diff += 2 * Math.PI
           groupRef.current.rotation.y += diff * 0.1
         }
       }
