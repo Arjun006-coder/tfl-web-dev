@@ -129,6 +129,11 @@ export function useVehicleTracks() {
     
     fetchTracks()
     
+    // Poll every 2 seconds to refresh and clean up old vehicles
+    const pollInterval = setInterval(() => {
+      fetchTracks()
+    }, 2000)
+    
     // Subscribe to real-time updates with proper status handling
     const channel = supabase
       .channel('vehicle-tracks-channel', {
@@ -139,23 +144,43 @@ export function useVehicleTracks() {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',  // Listen to INSERT, UPDATE, DELETE
           schema: 'public',
-          table: 'vehicle_detections'
+          table: 'vehicle_detections',
+          filter: 'intersection=eq.int1'
         },
         (payload) => {
-          console.log('Vehicle detection INSERT received:', payload)
-          const newData = payload.new as VehicleDetection
+          console.log('Vehicle detection change received:', payload.eventType)
           
-          // Only process if it has world coordinates and track_id
-          if (!newData.world_x || !newData.world_y || !newData.track_id) {
+          // Handle DELETE events
+          if (payload.eventType === 'DELETE' && payload.old) {
+            const oldData = payload.old as VehicleDetection
+            if (oldData.track_id) {
+              setTracks(prev => {
+                const updated = { ...prev }
+                const key = `${oldData.intersection}-${oldData.lane}`
+                if (updated[key]) {
+                  updated[key] = updated[key].filter(t => t.track_id !== oldData.track_id)
+                  if (updated[key].length === 0) {
+                    delete updated[key]
+                  }
+                }
+                return updated
+              })
+            }
+            return
+          }
+          
+          // Handle INSERT/UPDATE events
+          const newData = payload.new as VehicleDetection
+          if (!newData || !newData.world_x || !newData.world_y || !newData.track_id) {
             return
           }
           
           const key = `${newData.intersection}-${newData.lane}`
-          // Ignore stale rows older than 30s
+          // Ignore stale rows older than 10s
           try {
-            const isRecent = new Date(newData.created_at).getTime() >= Date.now() - 30_000
+            const isRecent = new Date(newData.created_at).getTime() >= Date.now() - 10_000
             if (!isRecent) return
           } catch {}
           
@@ -201,7 +226,6 @@ export function useVehicleTracks() {
               updated[key].push(track)
             }
             
-            console.log('Updated tracks:', updated)
             return updated
           })
         }
@@ -211,6 +235,7 @@ export function useVehicleTracks() {
       })
     
     return () => {
+      clearInterval(pollInterval)
       supabase.removeChannel(channel)
     }
   }, [])
