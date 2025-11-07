@@ -35,21 +35,26 @@ export default function DecisionLogic() {
                     <h3 className="font-semibold text-white">
                       {intersection.toUpperCase()} - {lane.charAt(0).toUpperCase() + lane.slice(1)}
                     </h3>
-                    <span className="text-2xl font-bold text-green-500">
-                      {status.updatedAt ? (
-                        (() => {
-                          try {
-                            const updateTime = new Date(status.updatedAt).getTime()
-                            const now = Date.now()
-                            const elapsed = Math.floor((now - updateTime) / 1000)
-                            const remaining = Math.max(0, status.duration - elapsed)
-                            return remaining > 0 && status.duration <= 120 ? `${remaining}s` : 'ACTIVE'
-                          } catch {
-                            return 'ACTIVE'
-                          }
-                        })()
-                      ) : 'ACTIVE'} GREEN
-                    </span>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-green-500 mb-1">GREEN</div>
+                      {status.updatedAt && status.duration > 0 ? (
+                        <div className="text-lg font-mono text-green-400">
+                          {(() => {
+                            try {
+                              const updateTime = new Date(status.updatedAt).getTime()
+                              const now = Date.now()
+                              const elapsed = Math.floor((now - updateTime) / 1000)
+                              const remaining = Math.max(0, status.duration - elapsed)
+                              return remaining > 0 && status.duration <= 120 ? `${remaining}s` : '0s'
+                            } catch {
+                              return `${status.duration}s`
+                            }
+                          })()}
+                        </div>
+                      ) : (
+                        <div className="text-lg font-mono text-gray-400">{status.duration || 0}s</div>
+                      )}
+                    </div>
                   </div>
                   
                   {status.reason ? (

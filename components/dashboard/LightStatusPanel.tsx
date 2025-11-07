@@ -145,11 +145,15 @@ export default function LightStatusPanel() {
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-gray-400 mb-1">Time Remaining</p>
-                    <CountdownTimer 
-                      duration={status?.duration || 30} 
-                      color={status?.color || 'red'} 
-                      updatedAt={status?.updatedAt}
-                    />
+                    {status?.duration && status.duration > 0 ? (
+                      <CountdownTimer 
+                        duration={status.duration} 
+                        color={status?.color || 'red'} 
+                        updatedAt={status?.updatedAt}
+                      />
+                    ) : (
+                      <div className="text-3xl font-bold font-mono text-white">0s</div>
+                    )}
                   </div>
                 </div>
               </motion.div>
