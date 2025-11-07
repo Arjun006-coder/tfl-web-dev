@@ -243,39 +243,58 @@ function Vehicle({ type, position, targetPosition, color }: VehicleProps) {
       groupRef.current.position.lerp(targetPos.current, lerpFactor)
       
       // Smooth rotation to face movement direction
-      // Determine direction based on movement vector
-      if (distance > 0.1) {
+      // Determine direction based on movement vector and position
+      const currentPos = groupRef.current.position
+      const targetPos = targetPos.current
+      
+      // Determine lane from position (North-South roads have x near intersectionX, East-West have z near intersectionZ)
+      const isNorthSouthRoad = Math.abs(currentPos.x - targetPos.x) < 0.5  // x is constant for NS roads
+      const isEastWestRoad = Math.abs(currentPos.z - targetPos.z) < 0.5    // z is constant for EW roads
+      
+      let targetAngle: number
+      
+      if (isNorthSouthRoad) {
+        // North-South road: vehicles face along z-axis
+        // Moving south (z increasing) = 0 radians, moving north (z decreasing) = PI radians
+        if (Math.abs(targetPos.z - currentPos.z) > 0.1) {
+          targetAngle = targetPos.z > currentPos.z ? 0 : Math.PI  // 0 = south, PI = north
+        } else {
+          // No movement, maintain current rotation or default
+          targetAngle = groupRef.current.rotation.y
+        }
+      } else if (isEastWestRoad) {
+        // East-West road: vehicles face along x-axis
+        // Moving east (x increasing) = PI/2, moving west (x decreasing) = -PI/2
+        if (Math.abs(targetPos.x - currentPos.x) > 0.1) {
+          targetAngle = targetPos.x > currentPos.x ? Math.PI / 2 : -Math.PI / 2
+        } else {
+          targetAngle = groupRef.current.rotation.y
+        }
+      } else {
+        // Fallback: use direction vector
         const direction = new Vector3()
-          .subVectors(targetPos.current, groupRef.current.position)
+          .subVectors(targetPos, currentPos)
           .normalize()
         
-        if (direction.length() > 0) {
-          // Calculate target angle based on movement direction
-          // For North-South: direction.z determines angle (0 = south, PI = north)
-          // For East-West: direction.x determines angle (PI/2 = east, -PI/2 = west)
-          let targetAngle: number
-          
-          // Check if moving primarily along z-axis (North-South) or x-axis (East-West)
+        if (direction.length() > 0.1) {
           if (Math.abs(direction.z) > Math.abs(direction.x)) {
-            // Moving along z-axis (North-South road)
-            // direction.z > 0 means moving south (positive z), direction.z < 0 means moving north (negative z)
-            targetAngle = direction.z > 0 ? 0 : Math.PI  // 0 = south, PI = north
+            targetAngle = direction.z > 0 ? 0 : Math.PI
           } else {
-            // Moving along x-axis (East-West road)
-            // direction.x > 0 means moving east (positive x), direction.x < 0 means moving west (negative x)
-            targetAngle = direction.x > 0 ? Math.PI / 2 : -Math.PI / 2  // PI/2 = east, -PI/2 = west
+            targetAngle = direction.x > 0 ? Math.PI / 2 : -Math.PI / 2
           }
-          
-          // Smooth rotation interpolation - VERY slow to prevent dancing
-          let currentAngle = groupRef.current.rotation.y
-          let diff = targetAngle - currentAngle
-          // Normalize angle difference to [-PI, PI]
-          while (diff > Math.PI) diff -= 2 * Math.PI
-          while (diff < -Math.PI) diff += 2 * Math.PI
-          // Much slower, smoother rotation
-          groupRef.current.rotation.y += diff * 0.05  // Reduced from 0.1 to 0.05
+        } else {
+          targetAngle = groupRef.current.rotation.y
         }
       }
+      
+      // Smooth rotation interpolation
+      let currentAngle = groupRef.current.rotation.y
+      let diff = targetAngle - currentAngle
+      // Normalize angle difference to [-PI, PI]
+      while (diff > Math.PI) diff -= 2 * Math.PI
+      while (diff < -Math.PI) diff += 2 * Math.PI
+      // Smooth rotation
+      groupRef.current.rotation.y += diff * 0.1
     }
   })
   
