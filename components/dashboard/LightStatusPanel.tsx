@@ -18,18 +18,24 @@ function CountdownTimer({ duration, color, updatedAt }: { duration: number; colo
   const [timeLeft, setTimeLeft] = useState<number>(0)
   
   useEffect(() => {
-    // Simple countdown: calculate from timestamp if available
+    // Always show countdown if duration is valid
     if (duration > 0 && duration <= 120) {
       const updateTimer = () => {
         if (updatedAt) {
           try {
             const updateTime = new Date(updatedAt).getTime()
+            if (isNaN(updateTime)) {
+              // Invalid timestamp - show duration
+              setTimeLeft(duration)
+              return
+            }
             const now = Date.now()
             const elapsed = Math.floor((now - updateTime) / 1000)
             const remaining = Math.max(0, duration - elapsed)
-            setTimeLeft(Math.floor(remaining))
+            setTimeLeft(remaining)
           } catch (e) {
-            setTimeLeft(0)
+            // If timestamp parsing fails, show duration
+            setTimeLeft(duration)
           }
         } else {
           // No timestamp - show duration as fallback
@@ -40,10 +46,11 @@ function CountdownTimer({ duration, color, updatedAt }: { duration: number; colo
       // Update immediately
       updateTimer()
       
-      // Update every 100ms
+      // Update every 100ms for smooth countdown
       const interval = setInterval(updateTimer, 100)
       return () => clearInterval(interval)
     } else {
+      // Invalid duration - show 0
       setTimeLeft(0)
     }
   }, [duration, updatedAt, color])
