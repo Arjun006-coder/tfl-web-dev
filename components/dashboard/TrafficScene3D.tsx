@@ -82,11 +82,6 @@ export default function TrafficScene3D() {
             lightStatus={debouncedLights}
           />
           
-          {/* Connecting road slightly lifted to avoid z-fighting */}
-          <mesh position={[0, 0.025, 0]} receiveShadow>
-            <boxGeometry args={[48, 0.3, 8]} />
-            <meshStandardMaterial color="#5a5a5a" polygonOffset polygonOffsetFactor={1} polygonOffsetUnits={1} />
-          </mesh>
 
           {/* Grass patches for visual context */}
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-45, -0.49, 0]} receiveShadow>
