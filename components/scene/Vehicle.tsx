@@ -229,10 +229,26 @@ function FallbackVehicle({ type, color }: { type: VehicleType; color: string }) 
 function Vehicle({ type, position, targetPosition, color }: VehicleProps) {
   const groupRef = useRef<Group>(null)
   const targetPos = useRef(new Vector3(...targetPosition))
+  const laneRef = useRef<string | null>(null)
   
   useEffect(() => {
     targetPos.current.set(...targetPosition)
   }, [targetPosition])
+  
+  // Determine lane from position (for rotation)
+  useEffect(() => {
+    // Check if vehicle is on North-South road (x is near intersection center) or East-West road (z is near intersection center)
+    // This is approximate - actual lane should come from vehicle data
+    const [x, y, z] = position
+    // If z changes more than x, it's on NS road. If x changes more, it's on EW road.
+    // We'll determine from target position movement
+    const [tx, ty, tz] = targetPosition
+    if (Math.abs(tz - z) > Math.abs(tx - x)) {
+      laneRef.current = tz > z ? 'north_to_south' : 'south_to_north'
+    } else {
+      laneRef.current = tx > x ? 'west_to_east' : 'east_to_west'
+    }
+  }, [position, targetPosition])
   
   // Very slow, smooth movement to prevent flashing and merging
   useFrame(() => {
@@ -243,48 +259,29 @@ function Vehicle({ type, position, targetPosition, color }: VehicleProps) {
       groupRef.current.position.lerp(targetPos.current, lerpFactor)
       
       // Smooth rotation to face movement direction
-      // Determine direction based on movement vector and position
-      const currentPos = groupRef.current.position
-      const targetPos = targetPos.current
+      // CRITICAL: North-South vehicles must face along z-axis (vertical), East-West along x-axis (horizontal)
+      const direction = new Vector3()
+        .subVectors(targetPos.current, groupRef.current.position)
       
-      // Determine lane from position (North-South roads have x near intersectionX, East-West have z near intersectionZ)
-      const isNorthSouthRoad = Math.abs(currentPos.x - targetPos.x) < 0.5  // x is constant for NS roads
-      const isEastWestRoad = Math.abs(currentPos.z - targetPos.z) < 0.5    // z is constant for EW roads
+      const distZ = Math.abs(direction.z)
+      const distX = Math.abs(direction.x)
       
       let targetAngle: number
       
-      if (isNorthSouthRoad) {
-        // North-South road: vehicles face along z-axis
-        // Moving south (z increasing) = 0 radians, moving north (z decreasing) = PI radians
-        if (Math.abs(targetPos.z - currentPos.z) > 0.1) {
-          targetAngle = targetPos.z > currentPos.z ? 0 : Math.PI  // 0 = south, PI = north
-        } else {
-          // No movement, maintain current rotation or default
-          targetAngle = groupRef.current.rotation.y
-        }
-      } else if (isEastWestRoad) {
-        // East-West road: vehicles face along x-axis
-        // Moving east (x increasing) = PI/2, moving west (x decreasing) = -PI/2
-        if (Math.abs(targetPos.x - currentPos.x) > 0.1) {
-          targetAngle = targetPos.x > currentPos.x ? Math.PI / 2 : -Math.PI / 2
-        } else {
-          targetAngle = groupRef.current.rotation.y
-        }
+      // Determine primary movement axis
+      if (distZ > distX) {
+        // Moving primarily along z-axis (North-South road)
+        // direction.z > 0 = moving south (toward positive z) = face 0 radians
+        // direction.z < 0 = moving north (toward negative z) = face PI radians
+        targetAngle = direction.z > 0 ? 0 : Math.PI
+      } else if (distX > 0.1) {
+        // Moving primarily along x-axis (East-West road)
+        // direction.x > 0 = moving east (toward positive x) = face PI/2 radians
+        // direction.x < 0 = moving west (toward negative x) = face -PI/2 radians
+        targetAngle = direction.x > 0 ? Math.PI / 2 : -Math.PI / 2
       } else {
-        // Fallback: use direction vector
-        const direction = new Vector3()
-          .subVectors(targetPos, currentPos)
-          .normalize()
-        
-        if (direction.length() > 0.1) {
-          if (Math.abs(direction.z) > Math.abs(direction.x)) {
-            targetAngle = direction.z > 0 ? 0 : Math.PI
-          } else {
-            targetAngle = direction.x > 0 ? Math.PI / 2 : -Math.PI / 2
-          }
-        } else {
-          targetAngle = groupRef.current.rotation.y
-        }
+        // Not moving much - maintain current rotation or set based on lane
+        return  // Don't change rotation if not moving
       }
       
       // Smooth rotation interpolation
@@ -294,7 +291,7 @@ function Vehicle({ type, position, targetPosition, color }: VehicleProps) {
       while (diff > Math.PI) diff -= 2 * Math.PI
       while (diff < -Math.PI) diff += 2 * Math.PI
       // Smooth rotation
-      groupRef.current.rotation.y += diff * 0.1
+      groupRef.current.rotation.y += diff * 0.15  // Faster rotation for better responsiveness
     }
   })
   

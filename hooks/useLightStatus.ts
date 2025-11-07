@@ -16,40 +16,56 @@ export function useLightStatus() {
   useEffect(() => {
     // Fetch initial
     const fetchInitial = async () => {
-      const { data: lights } = await supabase
-        .from('light_status')
-        .select('*')
-        .order('updated_at', { ascending: false })
-        .limit(8)
-      
-      const grouped: LightStatusMap = {}
-      lights?.forEach((light: LightStatus) => {
-        const key = `${light.intersection}-${light.lane}`
-        grouped[key] = {
-          color: light.color,
-          duration: light.duration,
-          reason: light.reason,
-          updatedAt: light.updated_at || light.created_at
+      try {
+        const { data: lights, error } = await supabase
+          .from('light_status')
+          .select('*')
+          .order('updated_at', { ascending: false })
+          .limit(8)
+        
+        if (error) {
+          console.error('Error fetching light status:', error)
+          return
         }
-      })
-      
-      setData(grouped)
+        
+        const grouped: LightStatusMap = {}
+        lights?.forEach((light: LightStatus) => {
+          const key = `${light.intersection}-${light.lane}`
+          grouped[key] = {
+            color: light.color,
+            duration: light.duration,
+            reason: light.reason,
+            updatedAt: light.updated_at || light.created_at
+          }
+        })
+        
+        setData(grouped)
+      } catch (err) {
+        console.error('Error in fetchInitial:', err)
+      }
     }
     
     fetchInitial()
     
-    // Real-time subscription
+    // Real-time subscription - listen for INSERT and UPDATE
     const channel = supabase
-      .channel('light-status-channel')
+      .channel('light-status-channel', {
+        config: {
+          broadcast: { self: true }
+        }
+      })
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: '*',  // Listen to all events (INSERT, UPDATE, DELETE)
           schema: 'public',
           table: 'light_status'
         },
         (payload) => {
+          console.log('Light status update received:', payload)
           const newData = payload.new as LightStatus
+          if (!newData) return
+          
           const key = `${newData.intersection}-${newData.lane}`
           
           setData(prev => ({
@@ -63,7 +79,9 @@ export function useLightStatus() {
           }))
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('Light status subscription status:', status)
+      })
     
     return () => {
       supabase.removeChannel(channel)
