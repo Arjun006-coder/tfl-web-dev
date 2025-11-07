@@ -21,34 +21,43 @@ function CountdownTimer({ duration, color, updatedAt }: { duration: number; colo
   const [timeLeft, setTimeLeft] = useState(duration)
   
   useEffect(() => {
-    // Reset timer when color or duration changes
-    setTimeLeft(duration)
-    
-    if (!updatedAt || duration <= 0 || duration > 120) {
-      // If duration is invalid or too large, reset to 0
-      setTimeLeft(0)
-      return
-    }
-    
-    const updateTimer = () => {
-      try {
-        const updateTime = new Date(updatedAt).getTime()
-        const now = Date.now()
-        const elapsed = Math.floor((now - updateTime) / 1000)
-        const remaining = Math.max(0, duration - elapsed)
-        setTimeLeft(remaining)
-      } catch (e) {
-        setTimeLeft(0)
+    // If duration is sent as remaining time, use it directly
+    // Otherwise calculate from updatedAt
+    if (duration > 0 && duration <= 120) {
+      // Duration is already remaining time from backend
+      setTimeLeft(duration)
+      
+      // Still update based on time elapsed since last update
+      if (updatedAt) {
+        const updateTimer = () => {
+          try {
+            const updateTime = new Date(updatedAt).getTime()
+            const now = Date.now()
+            const elapsed = Math.floor((now - updateTime) / 1000)
+            // Backend sends remaining time, so subtract elapsed since update
+            const remaining = Math.max(0, duration - elapsed)
+            setTimeLeft(remaining)
+          } catch (e) {
+            // If calculation fails, use duration directly
+            setTimeLeft(duration)
+          }
+        }
+        
+        // Update immediately
+        updateTimer()
+        
+        // Update every 100ms for smoother countdown
+        const interval = setInterval(updateTimer, 100)
+        
+        return () => clearInterval(interval)
+      } else {
+        // No updatedAt, just use duration directly
+        setTimeLeft(duration)
       }
+    } else {
+      // Invalid duration
+      setTimeLeft(0)
     }
-    
-    // Update immediately
-    updateTimer()
-    
-    // Update every 100ms for smoother countdown
-    const interval = setInterval(updateTimer, 100)
-    
-    return () => clearInterval(interval)
   }, [duration, updatedAt, color])
   
   const percentage = duration > 0 ? (timeLeft / duration) * 100 : 0
