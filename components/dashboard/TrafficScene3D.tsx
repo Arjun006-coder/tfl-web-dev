@@ -74,16 +74,10 @@ export default function TrafficScene3D() {
         </mesh>
         
         <Suspense fallback={null}>
+          {/* Only show intersection 1, centered */}
           <Intersection
-            position={[-45, 0, 0]}
+            position={[0, 0, 0]}
             name="int1"
-            vehicleData={debouncedVehicles}
-            lightStatus={debouncedLights}
-          />
-          
-          <Intersection
-            position={[45, 0, 0]}
-            name="int2"
             vehicleData={debouncedVehicles}
             lightStatus={debouncedLights}
           />
