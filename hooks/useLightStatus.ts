@@ -35,7 +35,7 @@ export function useLightStatus() {
             color: light.color,
             duration: light.duration,
             reason: light.reason,
-            updatedAt: light.updated_at || light.created_at
+            updatedAt: light.updated_at
           }
         })
         
@@ -74,7 +74,7 @@ export function useLightStatus() {
               color: newData.color,
               duration: newData.duration,
               reason: newData.reason,
-              updatedAt: newData.updated_at || newData.created_at
+              updatedAt: newData.updated_at
             }
           }))
         }
