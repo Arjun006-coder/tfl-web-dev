@@ -17,34 +17,42 @@ const lanes = [
 function CountdownTimer({ duration, color, updatedAt }: { duration: number; color: string; updatedAt?: string }) {
   const [timeLeft, setTimeLeft] = useState<number>(duration || 0)
   const startTimeRef = useRef<number | null>(null)
+  const durationRef = useRef<number>(duration || 0)
   
   useEffect(() => {
+    // Update duration ref when it changes
+    durationRef.current = duration || 0
+    
     // Reset when duration or updatedAt changes
     if (duration > 0 && duration <= 120) {
       // Use updatedAt if available, otherwise use current time as start
       if (updatedAt) {
         try {
           const updateTime = new Date(updatedAt).getTime()
-          if (!isNaN(updateTime)) {
+          if (!isNaN(updateTime) && updateTime > 0) {
             startTimeRef.current = updateTime
+            console.log(`[Countdown] ${color} - updatedAt: ${updatedAt}, duration: ${duration}, startTime: ${new Date(updateTime).toISOString()}`)
           } else {
             startTimeRef.current = Date.now()
+            console.log(`[Countdown] ${color} - Invalid updatedAt, using now, duration: ${duration}`)
           }
         } catch (e) {
           startTimeRef.current = Date.now()
+          console.log(`[Countdown] ${color} - Error parsing updatedAt, using now, duration: ${duration}`)
         }
       } else {
         startTimeRef.current = Date.now()
+        console.log(`[Countdown] ${color} - No updatedAt, using now, duration: ${duration}`)
       }
       
       const updateTimer = () => {
-        if (startTimeRef.current) {
+        if (startTimeRef.current && durationRef.current > 0) {
           const now = Date.now()
           const elapsed = Math.floor((now - startTimeRef.current) / 1000)
-          const remaining = Math.max(0, duration - elapsed)
+          const remaining = Math.max(0, durationRef.current - elapsed)
           setTimeLeft(remaining)
         } else {
-          setTimeLeft(duration)
+          setTimeLeft(durationRef.current)
         }
       }
       
@@ -56,6 +64,7 @@ function CountdownTimer({ duration, color, updatedAt }: { duration: number; colo
       return () => clearInterval(interval)
     } else {
       setTimeLeft(0)
+      console.log(`[Countdown] ${color} - Invalid duration: ${duration}`)
     }
   }, [duration, updatedAt, color])
   
